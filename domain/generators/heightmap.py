@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.ndimage import distance_transform_edt, gaussian_filter
+from scipy.ndimage import distance_transform_edt, gaussian_filter, zoom
 
 from data.constants import TILE_LAND, SEA_LEVEL, OCEAN_HEIGHT
 from domain.generators.base import GeneratorParams
@@ -41,11 +41,27 @@ class HeightmapParams(GeneratorParams):
 
 def _fbm(rng: np.random.Generator, shape: tuple[int, int],
          octaves: tuple[tuple[float, float], ...]) -> np.ndarray:
-    """分形噪声: (sigma, 振幅) 八度叠加, 输出粗略 [-1, 1]。"""
+    """分形噪声: (sigma, 振幅) 八度叠加, 输出粗略 [-1, 1]。
+
+    性能关键: 大 sigma 的低频八度在降采样网格上计算再放大
+    (sigma 110 在全图 1150 万像素上直接滤波要数秒, 在 1/8 网格上
+    等效 sigma 14 几乎免费)。全尺寸地图生成从 34s 降到秒级。
+    """
+    h, w = shape
     out = np.zeros(shape, dtype=np.float32)
     for sigma, amp in octaves:
-        layer = gaussian_filter(
-            rng.standard_normal(shape).astype(np.float32), sigma)
+        k = 1
+        while sigma / (k * 2) >= 6.0 and k < 8:
+            k *= 2
+        if k > 1:
+            sh, sw = h // k + 2, w // k + 2
+            small = gaussian_filter(
+                rng.standard_normal((sh, sw)).astype(np.float32), sigma / k)
+            # 双线性放大本身就是平滑的, 不需要再做全图滤波抹缝
+            layer = zoom(small, k, order=1)[:h, :w]
+        else:
+            layer = gaussian_filter(
+                rng.standard_normal(shape).astype(np.float32), sigma)
         layer /= max(float(np.abs(layer).max()), 1e-6)
         out += layer * amp
     return out / max(float(np.abs(out).max()), 1e-6)

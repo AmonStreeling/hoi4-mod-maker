@@ -747,14 +747,20 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
             return
         self._status_info.setText(tr("status_realistic_height"))
         self.repaint()
-        map_data = self._project.map_data
-        gen = RealisticHeightmapGenerator()
-        seed = random.randrange(100000)
-        new_height = gen.generate(map_data, HeightmapParams(seed=seed))
-        cmd = ApplyGeneratorCommand(
-            map_data, gen.target_layer, new_height,
-            label=tr("realistic_height_confirm_title"))
-        self._cmd_history.execute(cmd)
+        from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtCore import Qt
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            map_data = self._project.map_data
+            gen = RealisticHeightmapGenerator()
+            seed = random.randrange(100000)
+            new_height = gen.generate(map_data, HeightmapParams(seed=seed))
+            cmd = ApplyGeneratorCommand(
+                map_data, gen.target_layer, new_height,
+                label=tr("realistic_height_confirm_title"))
+            self._cmd_history.execute(cmd)
+        finally:
+            QApplication.restoreOverrideCursor()
         self._project.mark_dirty()
         from features.map.preview import renderer as preview_renderer
         preview_renderer.invalidate_cache(self._canvas)
@@ -780,12 +786,18 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
             return
         self._status_info.setText(tr("status_detail_terrain"))
         self.repaint()
-        map_data = self._project.map_data
-        gen = TerrainDetailGenerator()
-        new_terrain = gen.generate(map_data, TerrainDetailParams(seed=seed))
-        cmd = GenerateTerrainCommand(map_data, new_terrain)
-        cmd.label = tr("detail_terrain_confirm_title")
-        self._cmd_history.execute(cmd)
+        from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtCore import Qt
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            map_data = self._project.map_data
+            gen = TerrainDetailGenerator()
+            new_terrain = gen.generate(map_data, TerrainDetailParams(seed=seed))
+            cmd = GenerateTerrainCommand(map_data, new_terrain)
+            cmd.label = tr("detail_terrain_confirm_title")
+            self._cmd_history.execute(cmd)
+        finally:
+            QApplication.restoreOverrideCursor()
         self._project.mark_dirty()
         # 地形变了 → colormap 资产要重生, 预览缓存作废
         self._project.mark_assets_dirty(
