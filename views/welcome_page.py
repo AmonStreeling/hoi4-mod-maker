@@ -88,6 +88,7 @@ class WelcomePage(QWidget):
     open_project_requested = pyqtSignal()
     open_recent_requested = pyqtSignal(str)         # path
     import_mod_requested = pyqtSignal()              # 导入MOD地图
+    open_vanilla_requested = pyqtSignal()            # 打开原版游戏地图(只读参考)
     language_changed = pyqtSignal(str)               # 语言 code, eg. "zh" / "en" / "ja"
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -196,6 +197,11 @@ class WelcomePage(QWidget):
         btn_import.setStyleSheet(btn_style)
         btn_import.clicked.connect(lambda: self.import_mod_requested.emit())
         left.addWidget(btn_import, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        btn_vanilla = QPushButton(tr("welcome_open_vanilla"))
+        btn_vanilla.setStyleSheet(btn_style)
+        btn_vanilla.clicked.connect(lambda: self.open_vanilla_requested.emit())
+        left.addWidget(btn_vanilla, alignment=Qt.AlignmentFlag.AlignCenter)
 
         btn_guide = QPushButton(tr("action_guide"))
         btn_guide.setStyleSheet(btn_style)

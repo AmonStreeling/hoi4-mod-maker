@@ -137,6 +137,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         self._welcome_page.open_project_requested.connect(self._on_open_project)
         self._welcome_page.open_recent_requested.connect(self._on_welcome_open_recent)
         self._welcome_page.import_mod_requested.connect(self._on_welcome_import_mod)
+        self._welcome_page.open_vanilla_requested.connect(self._on_open_vanilla_reference)
         self._welcome_page.language_changed.connect(self._on_language_changed)
         self._stack.addWidget(self._welcome_page)
 
@@ -171,6 +172,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         self._add_action(file_menu, tr("action_load_vanilla_ref"), self._on_load_vanilla_ref)
         self._add_action(file_menu, tr("action_import_landmask"), self._on_import_landmask, "Ctrl+Shift+I")
         self._add_action(file_menu, tr("action_import_mod_map"), self._on_import_mod_map, "Ctrl+Shift+M")
+        self._add_action(file_menu, tr("action_open_vanilla"), self._on_open_vanilla_reference)
         self._add_action(file_menu, tr("action_export_mod"), self._on_export_mod, "Ctrl+E")
         self._add_action(file_menu, tr("action_test_export"), self._on_test_export, "Ctrl+T")
         file_menu.addSeparator()
@@ -1007,8 +1009,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
 
     def _on_welcome_import_mod(self) -> None:
         """欢迎页的导入MOD按钮：直接选文件夹 → 导入 → 进编辑器。"""
-        from PyQt5.QtWidgets import QFileDialog, QProgressDialog
-        from services.import_service import validate_mod_directory, import_mod_map
+        from PyQt5.QtWidgets import QFileDialog
 
         mod_dir = QFileDialog.getExistingDirectory(
             self, tr("dlg_select_mod_dir"),
@@ -1016,6 +1017,42 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         )
         if not mod_dir:
             return
+        self._import_mod_dir_with_progress(mod_dir)
+
+    def _on_open_vanilla_reference(self) -> None:
+        """打开原版游戏地图作为只读参考项目。
+
+        游戏目录只在导入时被读取, 永远不会被写入; 导入结果不绑定任何
+        项目文件, 保存时自动走"另存为" — 想保留修改只能存成自己的新项目,
+        所以"原版不可被改坏"的语义天然成立。
+        """
+        from PyQt5.QtWidgets import QFileDialog
+        from services.game_assets import find_hoi4_install
+
+        # 编辑器里已开着项目时, 先确认替换
+        if self._stack.currentWidget() is self._editor:
+            reply = QMessageBox.question(
+                self, tr("dlg_confirm"), tr("vanilla_confirm_replace"))
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        game_dir = find_hoi4_install()
+        if game_dir is None:
+            QMessageBox.information(
+                self, tr("vanilla_select_dir_title"), tr("vanilla_dir_not_found"))
+            game_dir = QFileDialog.getExistingDirectory(
+                self, tr("vanilla_select_dir_title"),
+                "", QFileDialog.Option.ShowDirsOnly,
+            )
+            if not game_dir:
+                return
+        self._import_mod_dir_with_progress(game_dir, vanilla_note=True)
+
+    def _import_mod_dir_with_progress(
+            self, mod_dir: str, vanilla_note: bool = False) -> None:
+        """带进度框的导入流程 (欢迎页导入MOD / 打开原版参考共用)。"""
+        from PyQt5.QtWidgets import QProgressDialog
+        from services.import_service import validate_mod_directory, import_mod_map
 
         missing = validate_mod_directory(mod_dir)
         if missing:
@@ -1105,10 +1142,14 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         info_text = tr("import_done").format(w=new_w, h=new_h, n=result['province_count'])
         self._status_info.setText(info_text)
 
+        extra_text = ""
+        if vanilla_note:
+            extra_text = "\n\n" + tr("vanilla_opened_note")
         warnings_text = ""
         if result["warnings"]:
             warnings_text = "\n\n" + tr("import_warnings") + "\n".join(f"- {w}" for w in result["warnings"])
-        QMessageBox.information(self, tr("import_done_title"), info_text + warnings_text)
+        QMessageBox.information(
+            self, tr("import_done_title"), info_text + extra_text + warnings_text)
 
     # ═══════════════════════ 快捷键 ═══════════════════════════
 
