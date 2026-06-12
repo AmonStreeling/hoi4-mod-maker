@@ -4,11 +4,13 @@ game_assets 测试 — 映射表解析 / 图集切片 / 缺失降级。
 真实游戏文件不进 CI: 集成测试仅在本机存在 HOI4 安装时运行。
 """
 
+import json
 import os
 
 import numpy as np
 import pytest
 
+import services.game_assets as ga
 from services.game_assets import (
     GameAssets, parse_terrain_to_texture, parse_graphical_terrain,
     parse_water_palette_indices, slice_atlas,
@@ -115,6 +117,41 @@ def test_missing_file_degrades_to_none(tmp_path):
     assets = GameAssets(install_dir=str(tmp_path))
     assert assets.terrain_to_texture() is None
     assert TERRAIN_DEF_RELPATH.split("/")[-1] in assets.last_error
+
+
+# ═══════ 游戏目录持久化配置 ═══════
+
+def _fake_game_dir(tmp_path):
+    game = tmp_path / "game"
+    (game / "common" / "terrain").mkdir(parents=True)
+    (game / "common" / "terrain" / "00_terrain.txt").write_text(
+        "terrain = { t = { type = plains color = { 0 } texture = 1 } }")
+    return str(game)
+
+
+def test_chosen_game_dir_persists_and_wins(tmp_path, monkeypatch):
+    """选择目录写进配置 (保留已有键), 之后查找优先用它。"""
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text('{"language": "zh"}', encoding="utf-8")
+    monkeypatch.setattr(ga, "CONFIG_PATH", str(cfg))
+    monkeypatch.setattr(ga, "_default_assets", None)
+    game_dir = _fake_game_dir(tmp_path)
+
+    assets = ga.set_default_install_dir(game_dir)
+
+    data = json.loads(cfg.read_text(encoding="utf-8"))
+    assert data["hoi4_game_dir"] == game_dir
+    assert data["language"] == "zh"          # 不丢其他设置
+    assert ga.find_hoi4_install() == game_dir
+    assert assets.install_dir == game_dir
+
+
+def test_stale_config_game_dir_ignored(tmp_path, monkeypatch):
+    """配置里的目录已失效 (游戏被卸载/盘符变了) → 忽略, 走默认查找。"""
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text('{"hoi4_game_dir": "Z:/no/such/dir"}', encoding="utf-8")
+    monkeypatch.setattr(ga, "CONFIG_PATH", str(cfg))
+    assert ga._read_config_game_dir() is None
 
 
 # ═══════ 真实游戏文件集成 (仅本机) ═══════

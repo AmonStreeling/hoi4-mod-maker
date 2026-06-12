@@ -16,6 +16,7 @@ texture = 11 即 4×4 网格第 3 行最右格)。
 
 from __future__ import annotations
 
+import json
 import os
 import re
 
@@ -33,12 +34,48 @@ ATLAS_NORMAL_RELPATH = "map/terrain/atlas_normal0.dds"
 COLORMAP_RGB_RELPATH = "map/terrain/colormap_rgb_cityemissivemask_a.dds"
 
 
+# 用户配置文件 (与语言设置共用), 游戏目录持久化到这里
+CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".hoi4_map_maker.json")
+_CONFIG_KEY_GAME_DIR = "hoi4_game_dir"
+
+
+def _read_config_game_dir() -> str | None:
+    """读用户配置里保存的游戏目录; 不存在或已失效返回 None。"""
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            path = json.load(f).get(_CONFIG_KEY_GAME_DIR)
+    except Exception:
+        return None
+    if path and os.path.isfile(os.path.join(path, TERRAIN_DEF_RELPATH)):
+        return path
+    return None
+
+
+def _save_config_game_dir(path: str) -> None:
+    """把游戏目录写进用户配置 (保留其他键如 language); 写失败不致命。"""
+    config: dict = {}
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except Exception:
+        pass
+    config[_CONFIG_KEY_GAME_DIR] = path
+    try:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass  # 本次会话内仍然生效, 只是下次启动要重选
+
+
 def find_hoi4_install() -> str | None:
     """返回 HOI4 安装目录, 找不到返回 None。
 
-    目前只检查配置的默认路径 (DEFAULT_HOI4_PATH);
+    查找顺序: 用户配置保存的目录 → 内置默认路径 (DEFAULT_HOI4_PATH)。
     自动扫描 Steam 库列表属于 M3 (公开发布准备)。
     """
+    saved = _read_config_game_dir()
+    if saved is not None:
+        return saved
     if os.path.isfile(os.path.join(DEFAULT_HOI4_PATH, TERRAIN_DEF_RELPATH)):
         return DEFAULT_HOI4_PATH
     return None
@@ -232,7 +269,11 @@ def get_default_assets() -> GameAssets:
 
 
 def set_default_install_dir(path: str) -> GameAssets:
-    """用户手动选择游戏目录后重建默认实例 (旧缓存全部作废)。"""
+    """用户手动选择游戏目录后重建默认实例 (旧缓存全部作废)。
+
+    同时持久化到用户配置, 下次启动自动使用该目录。
+    """
     global _default_assets
     _default_assets = GameAssets(install_dir=path)
+    _save_config_game_dir(path)
     return _default_assets
