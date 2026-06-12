@@ -381,6 +381,7 @@ class ExportDialog(QDialog):
             ("gfx", tr("export_scope_gfx"), True),
             ("replace_path", tr("export_scope_replace_path"), True),
             ("descriptor", tr("export_scope_descriptor"), True),
+            ("compact_ids", tr("export_scope_compact_ids"), True),
         ]
         for key, label, default in scope_items:
             cb = QCheckBox(label)
@@ -508,7 +509,8 @@ class ExportDialog(QDialog):
     # (BMP + definition.csv + buildings + adjacencies + strategicregions + supply_nodes/railways)
     # 不写 states/countries/localisation/gfx/replace_path/descriptor —
     # 适合已有 MOD 框架, 只需要地图素材的用户
-    _MAP_ONLY_KEYS = frozenset({"map", "strategic_regions", "supply"})
+    # compact_ids 也保留: 只地图导出同样需要 definition.csv 编号连续
+    _MAP_ONLY_KEYS = frozenset({"map", "strategic_regions", "supply", "compact_ids"})
 
     def _apply_scope_preset(self, preset: str) -> None:
         """一键设置 scope 勾选状态. preset = "all" | "map_only" | "none"."""
@@ -555,6 +557,21 @@ class ExportDialog(QDialog):
 
     def _do_export(self) -> None:
         """选择目录 → 启动后台导出。"""
+        # 压实被关掉且编号有空洞 → 导出的 MOD 属性会错位, 必须用户确认
+        if not self._scope_checks["compact_ids"].isChecked():
+            ids = np.unique(self.canvas.province_map)
+            nonzero = ids[ids > 0]
+            gaps = int(nonzero[-1]) - len(nonzero) if len(nonzero) else 0
+            if gaps > 0:
+                reply = QMessageBox.warning(
+                    self, tr("dlg_confirm"),
+                    tr("export_compact_off_warn").format(gaps=gaps),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+
         output_dir = QFileDialog.getExistingDirectory(
             self, tr("export_choose_dir"), DEFAULT_MOD_OUTPUT_PATH)
         if not output_dir:
