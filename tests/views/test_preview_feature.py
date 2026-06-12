@@ -98,6 +98,15 @@ def test_degrades_to_land_when_assets_unavailable(canvas, monkeypatch):
     assert canvas._preview_error != ""
 
 
+def test_preview_mode_enables_smooth_scaling(canvas):
+    """预览模式开平滑缩放 (纹理图), 编辑模式保持最近邻 (像素硬边)。"""
+    from PyQt5.QtGui import QPainter
+    canvas.display_mode = "preview"
+    assert canvas.renderHints() & QPainter.RenderHint.SmoothPixmapTransform
+    canvas.display_mode = "land"
+    assert not (canvas.renderHints() & QPainter.RenderHint.SmoothPixmapTransform)
+
+
 def test_renderer_has_no_partial_render():
     """预览渲染器刻意不提供 partial_render (画布将回退全量)。"""
     assert not hasattr(preview_renderer, "partial_render")

@@ -518,6 +518,10 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         if mode == self._display_mode:
             return
         self._display_mode = mode
+        # 预览是带纹理的合成图: 缩放显示必须平滑采样, 否则最近邻采样把
+        # 纹理细节打碎成噪点(看着发糊)。编辑模式保持像素硬边便于精确操作。
+        self.setRenderHint(
+            QPainter.RenderHint.SmoothPixmapTransform, mode == "preview")
         # 国家/州归属 overlay — 全局开关，仅在基础视图本身不按国家/州染色的模式下显示，
         # 避免在 state/country/continent/strategic_region 模式下双层染色造成混乱。
         overlay = getattr(self, '_terrain_context_overlay', None)
