@@ -70,6 +70,21 @@
 
 ## 风险
 
-- 贴图解码格式（M1 第一步即验证，有备选库）
+- 贴图解码格式（M1 第一步即验证，有备选库）✅ 已验证 Pillow 原生支持
 - M2 是唯一触碰存量主窗口布局的部分，保证 12 个模式功能零变化
 - 体量为项目最大单次改造，按里程碑独立验收，不一次性合并
+
+## 最终执行顺序（2026-06-12 架构规划后用户批准）
+
+地形细化采用**路线 C**：自动生成打底（参数化/种子/可重新生成）+ 手动笔刷精修 + 可撤销。
+
+| 步骤 | 内容 | 依赖 |
+|---|---|---|
+| ①基础 | P1 画布渲染派发注册化（删 `_render_X_mode` 硬编码 + 死代码 `merge_provinces`）；P2 `check_project_readiness`+`CheckItem` 迁至 `services/readiness_service.py` | 无 |
+| ②预览进软件 | `features/map/preview/`（page/renderer）+ container 注册 + 游戏目录选择 + 手动刷新缓存策略 | P1 |
+| ③路线C地形细化 | `domain/generators/base.py` Generator 协议 + `commands/map/apply_generator.py` 通用命令；terrain_detail 首个接入 | ②（看得见才能调） |
+| ④M2 流程层 | `views/workflow_panel.py` 进度面板（订阅 `PROJECT_READINESS_CHANGED`）+ 阶段条 | P2、③（自动按钮要有东西可按） |
+| ⑤M3 入口文案 | 欢迎页两条路 + 全量术语人话化 | ④（阶段名定稿） |
+| 独立 | `mod_exporter.py` 拆分 | 无关联，单独排期 |
+
+技术拍板：生成器协议立刻建立（拖到第 4 个生成器再统一就是大迁移）；完成度检查用"粗粒度事件后重算"策略，实测慢再优化；预览无有意义的局部渲染，partial 一律走全量。

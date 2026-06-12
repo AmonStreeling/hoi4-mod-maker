@@ -73,25 +73,31 @@ def test_strategic_region_compact():
     """compact_with_references 同步战略区省份 ID。"""
     from domain.map_data import MapData
     from domain.managers.strategic_region import StrategicRegionManager
+    import data.constants as constants
     from data.constants import set_map_size
 
+    old_w, old_h = constants.MAP_WIDTH, constants.MAP_HEIGHT
     set_map_size(8, 4)
-    md = MapData()
-    md.province_map = np.array([
-        [0, 0, 1, 1, 3, 3, 5, 5],
-        [0, 0, 1, 1, 3, 3, 5, 5],
-        [0, 0, 1, 1, 3, 3, 5, 5],
-        [0, 0, 1, 1, 3, 3, 5, 5],
-    ], dtype=np.int32)
-    md.tile_map = np.ones((4, 8), dtype=np.uint8)
+    try:
+        md = MapData()
+        md.province_map = np.array([
+            [0, 0, 1, 1, 3, 3, 5, 5],
+            [0, 0, 1, 1, 3, 3, 5, 5],
+            [0, 0, 1, 1, 3, 3, 5, 5],
+            [0, 0, 1, 1, 3, 3, 5, 5],
+        ], dtype=np.int32)
+        md.tile_map = np.ones((4, 8), dtype=np.uint8)
 
-    sr_mgr = StrategicRegionManager()
-    r = sr_mgr.create_region()
-    r.province_ids = [1, 3, 5]
+        sr_mgr = StrategicRegionManager()
+        r = sr_mgr.create_region()
+        r.province_ids = [1, 3, 5]
 
-    mapping = md.compact_with_references(strategic_region_mgr=sr_mgr)
-    new_ids = sorted(r.province_ids)
-    assert new_ids == [1, 2, 3]
+        mapping = md.compact_with_references(strategic_region_mgr=sr_mgr)
+        new_ids = sorted(r.province_ids)
+        assert new_ids == [1, 2, 3]
+    finally:
+        # 全局尺寸是共享状态, 必须还原, 否则污染后续测试
+        set_map_size(old_w, old_h)
 
 
 # ═══════ 河流验证 ═══════

@@ -91,6 +91,11 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._display_buffer = np.zeros((MAP_HEIGHT, MAP_WIDTH, 4), dtype=np.uint8)
         self._province_border_buffer = None  # 延迟创建
 
+        # 显示模式渲染器注册表: mode → renderer 模块路径 (延迟加载并缓存)
+        from views.canvas.render_registry import DEFAULT_RENDERERS
+        self._renderer_paths: dict[str, str] = dict(DEFAULT_RENDERERS)
+        self._renderer_cache: dict[str, object] = {}
+
         # State / Country / Strategic Region / Railway 颜色缓冲区
         self._state_color_rgb = None   # np.ndarray (H, W, 3) or None
         self._country_color_rgb = None  # np.ndarray (H, W, 3) or None
@@ -882,25 +887,25 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
 
     # ========== 渲染（性能核心） ==========
 
+    def register_renderer(self, mode: str, module_path: str) -> None:
+        """注册/覆盖一个显示模式的渲染器模块 (运行时扩展点, 如预览模式)。
+
+        renderer 模块约定见 views/canvas/render_registry.py 模块说明。
+        """
+        self._renderer_paths[mode] = module_path
+        self._renderer_cache.pop(mode, None)
+
+    def _resolve_renderer(self, mode: str):
+        """按模式取渲染器模块。未注册的模式回退 land; 延迟 import 并缓存。"""
+        if mode not in self._renderer_cache:
+            import importlib
+            path = self._renderer_paths.get(mode) or self._renderer_paths["land"]
+            self._renderer_cache[mode] = importlib.import_module(path)
+        return self._renderer_cache[mode]
+
     def _full_render(self) -> None:
         """全量渲染整个地图到显示缓冲区（根据当前模式）"""
-        # 新 mode 没有专用 renderer 的复用 land
-        renderers = {
-            "land": self._render_land_mode,
-            "terrain": self._render_terrain_mode,
-            "height": self._render_height_mode,
-            "province": self._render_province_mode,
-            "state": self._render_state_mode,
-            "country": self._render_country_mode,
-            "river": self._render_river_mode,
-            "logistics": self._render_logistics_mode,
-            "continent": self._render_continent_mode,
-            "strategic_region": self._render_sr_mode,
-            "colormap": self._render_land_mode,
-            "default_map": self._render_land_mode,
-            "province_terrain": self._render_province_terrain_mode,
-        }
-        renderers.get(self._display_mode, self._render_land_mode)()
+        self._resolve_renderer(self._display_mode).render(self)
         self._update_pixmap_from_buffer()
         # VP 叠加层可见性切换（不重绘，用缓存）
         self._update_vp_visibility()
@@ -910,131 +915,14 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
 
     def _partial_render(self, x0: int, y0: int, x1: int, y1: int) -> None:
         """局部渲染指定矩形区域（根据当前模式）"""
-        renderers = {
-            "land": self._partial_render_land,
-            "terrain": self._partial_render_terrain,
-            "height": self._partial_render_height,
-            "province": self._partial_render_province,
-            "state": self._partial_render_state,
-            "country": self._partial_render_country,
-            "river": self._partial_render_river,
-            "logistics": self._partial_render_logistics,
-            "continent": self._partial_render_continent,
-            "strategic_region": self._partial_render_sr,
-            "colormap": self._partial_render_land,
-            "default_map": self._partial_render_land,
-            "province_terrain": self._partial_render_province_terrain,
-        }
-        renderers[self._display_mode](x0, y0, x1, y1)
+        renderer = self._resolve_renderer(self._display_mode)
+        partial = getattr(renderer, "partial_render", None)
+        if partial is None:
+            # 该渲染器不支持局部渲染 (整图合成类, 如预览) → 回退全量
+            self._full_render()
+            return
+        partial(self, x0, y0, x1, y1)
         self._update_pixmap_from_buffer()
-
-    def _render_logistics_mode(self) -> None:
-        from features.map.logistics.renderer import render
-        render(self)
-
-    def _partial_render_logistics(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.logistics.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- land 模式渲染 ----------
-
-    def _render_land_mode(self) -> None:
-        from features.map.land.renderer import render
-        render(self)
-
-    def _partial_render_land(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.land.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- terrain 模式渲染 ----------
-
-    def _render_terrain_mode(self) -> None:
-        from features.map.terrain.renderer import render
-        render(self)
-
-    def _partial_render_terrain(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.terrain.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- height 模式渲染 ----------
-
-    def _render_height_mode(self) -> None:
-        from features.map.height.renderer import render
-        render(self)
-
-    def _partial_render_height(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.height.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- province 模式渲染 ----------
-
-    def _render_province_mode(self) -> None:
-        from features.map.province.renderer import render
-        render(self)
-
-    def _partial_render_province(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.province.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- state 模式渲染 ----------
-
-    def _render_state_mode(self) -> None:
-        from features.map.state.renderer import render
-        render(self)
-
-    def _partial_render_state(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.state.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- province_terrain 模式渲染（gameplay terrain 颜色） ----------
-
-    def _render_province_terrain_mode(self) -> None:
-        from features.map.province_terrain.renderer import render
-        render(self)
-
-    def _partial_render_province_terrain(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.province_terrain.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- country 模式渲染 ----------
-
-    def _render_country_mode(self) -> None:
-        from features.map.country.renderer import render
-        render(self)
-
-    def _partial_render_country(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.country.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- continent 模式渲染 ----------
-
-    def _render_continent_mode(self) -> None:
-        from features.map.continent.renderer import render
-        render(self)
-
-    def _partial_render_continent(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.continent.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- strategic_region 模式渲染 ----------
-
-    def _render_sr_mode(self) -> None:
-        from features.map.strategic_region.renderer import render
-        render(self)
-
-    def _partial_render_sr(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.strategic_region.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
-
-    # ---------- river 模式渲染 ----------
-
-    def _render_river_mode(self) -> None:
-        from features.map.river.renderer import render
-        render(self)
-
-    def _partial_render_river(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        from features.map.river.renderer import partial_render
-        partial_render(self, x0, y0, x1, y1)
 
     # ---------- 通用渲染辅助 ----------
 
@@ -1136,32 +1024,6 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
             return False
 
         self._province_map[right_half] = new_id
-        self._full_render()
-        self._render_province_overlay()
-        return True
-
-    def merge_provinces(self, pid_keep: int, pid_remove: int,
-                         state_mgr=None, country_mgr=None,
-                         strategic_region_mgr=None) -> bool:
-        """合并两个省份：pid_remove 的所有像素归入 pid_keep。
-        合并后立即压实 ID 并同步 state/country 引用，避免 ID gap。"""
-        if pid_keep <= 0 or pid_remove <= 0 or pid_keep == pid_remove:
-            return False
-        mask = self._province_map == pid_remove
-        if not np.any(mask):
-            return False
-        self._province_map[mask] = pid_keep
-        # 压实 + 同步引用
-        mapping = self._map_data.compact_with_references(
-            state_mgr=state_mgr, country_mgr=country_mgr,
-            strategic_region_mgr=strategic_region_mgr,
-        )
-        # 更新 canvas 持有的选中省份 id
-        if self._selected_province_id in mapping:
-            self._selected_province_id = mapping[self._selected_province_id]
-        self._border_cache = None  # 省份变了，清缓存
-        if hasattr(self, '_border_base_pixmap'):
-            self._border_base_pixmap = None
         self._full_render()
         self._render_province_overlay()
         return True
