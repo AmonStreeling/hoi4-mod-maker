@@ -266,6 +266,7 @@ class ToolPanel(QWidget):
     density_soft_edge_changed = pyqtSignal(int)
     density_clear_requested = pyqtSignal()
     auto_terrain_requested = pyqtSignal()
+    detail_terrain_requested = pyqtSignal(int)
     downgrade_mountain_requested = pyqtSignal()
     downgrade_lasso_mode_toggled = pyqtSignal(bool)
     terrain_brush_size_changed = pyqtSignal(int)
@@ -534,6 +535,7 @@ class ToolPanel(QWidget):
         p.terrain_brush_size_changed.connect(self.terrain_brush_size_changed)
         p.terrain_soft_edge_changed.connect(self.terrain_soft_edge_changed)
         p.auto_terrain_requested.connect(self.auto_terrain_requested)
+        p.detail_terrain_requested.connect(self.detail_terrain_requested)
         p.downgrade_mountain_requested.connect(self.downgrade_mountain_requested)
         p.downgrade_lasso_mode_toggled.connect(self.downgrade_lasso_mode_toggled)
         # 属性地形 page 信号

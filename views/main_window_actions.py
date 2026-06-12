@@ -729,6 +729,40 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         self._canvas.terrain_map = map_data.terrain_map
         self._status_info.setText(tr("status_auto_terrain_done"))
 
+    def _on_detail_terrain(self, seed: int) -> None:
+        """按气候自动细化地形 — 路线 C 生成器的首个 UI 接入。
+
+        纬度气候带 (丛林/沙漠/森林/雪原) + 海拔叠加 (丘陵/山地/雪线)
+        + 噪声斑块。可撤销; 同种子可复现, 换种子重新生成。
+        """
+        from domain.generators.terrain_detail import (
+            TerrainDetailGenerator, TerrainDetailParams)
+        from commands.map.generate_terrain import GenerateTerrainCommand
+        ret = QMessageBox.question(
+            self, tr("detail_terrain_confirm_title"),
+            tr("detail_terrain_confirm_msg"),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if ret != QMessageBox.Yes:
+            return
+        self._status_info.setText(tr("status_detail_terrain"))
+        self.repaint()
+        map_data = self._project.map_data
+        gen = TerrainDetailGenerator()
+        new_terrain = gen.generate(map_data, TerrainDetailParams(seed=seed))
+        cmd = GenerateTerrainCommand(map_data, new_terrain)
+        cmd.label = tr("detail_terrain_confirm_title")
+        self._cmd_history.execute(cmd)
+        self._project.mark_dirty()
+        # 地形变了 → colormap 资产要重生, 预览缓存作废
+        self._project.mark_assets_dirty(
+            "map/terrain/colormap_rgb_cityemissivemask_a.dds",
+        )
+        from features.map.preview import renderer as preview_renderer
+        preview_renderer.invalidate_cache(self._canvas)
+        self._canvas.terrain_map = map_data.terrain_map
+        self._status_info.setText(tr("status_detail_terrain_done"))
+
     def _on_downgrade_mountain(self, mask=None) -> None:
         """降级山脉 (全图或选区)。mask=None 时全图, 否则只在 mask 内。"""
         from commands.map.downgrade_mountain import DowngradeMountainCommand

@@ -352,6 +352,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
             lambda s: setattr(self._canvas, '_density_soft_edge', s / 100.0))
         tp.density_clear_requested.connect(self._on_density_clear)
         tp.auto_terrain_requested.connect(self._on_auto_terrain)
+        tp.detail_terrain_requested.connect(self._on_detail_terrain)
         tp.downgrade_mountain_requested.connect(self._on_downgrade_mountain)
         tp.downgrade_lasso_mode_toggled.connect(self._on_downgrade_lasso_mode)
         cv.downgrade_lasso_drawn.connect(self._on_downgrade_lasso_drawn)
