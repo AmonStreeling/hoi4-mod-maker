@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 from typing import Any
 
 import numpy as np
@@ -522,6 +523,11 @@ def import_mod_map(mod_dir: str) -> dict[str, Any]:
         if country_colors:
             warnings.append(f"读取了 {len(country_colors)} 个国家颜色")
 
+    # 14. 读取国家历史 (首都/政体, 可选)
+    country_history = _parse_country_history_dir(mod_dir)
+    if country_history:
+        warnings.append(f"读取了 {len(country_history)} 个国家历史文件")
+
     return {
         "width": w,
         "height": h,
@@ -539,6 +545,9 @@ def import_mod_map(mod_dir: str) -> dict[str, Any]:
         "adjacencies": adjacencies_data,
         "assets": assets,
         "country_colors": country_colors,
+        "country_history": country_history,
+        # TAG → 本地化国名等 (states/战略区名已就地替换, 国家名在填充时查)
+        "localisation": loc_map,
         "warnings": warnings,
     }
 
@@ -766,3 +775,42 @@ def _collect_art_assets(mod_dir: str) -> dict[str, bytes]:
             _add_file(full, f"map/terrain/{fn}")
 
     return assets
+
+
+# ── 国家历史 ────────────────────────────────────────────────
+
+_CAPITAL_RE = re.compile(r"^\s*capital\s*=\s*(\d+)", re.M)
+_RULING_PARTY_RE = re.compile(r"ruling_party\s*=\s*(\w+)")
+
+
+def _parse_country_history_dir(mod_dir: str) -> dict[str, dict]:
+    """解析 history/countries/*.txt → {TAG: {capital_state, ruling_party}}。
+
+    文件名约定 "TAG - Name.txt"。只提取最常用的两个字段:
+    - capital: 注意 HOI4 这里是 State ID, 不是省份 ID,
+      填充进 CountryData 前必须换算 (见 _populate_imported_data)
+    - set_politics 块里的 ruling_party
+    """
+    out: dict[str, dict] = {}
+    hist_dir = os.path.join(mod_dir, "history", "countries")
+    if not os.path.isdir(hist_dir):
+        return out
+    for fn in sorted(os.listdir(hist_dir)):
+        if not fn.endswith(".txt"):
+            continue
+        tag = fn[:3].upper()
+        if len(tag) != 3 or not tag.isascii() or not tag.isalnum():
+            continue
+        try:
+            with open(os.path.join(hist_dir, fn), "r",
+                      encoding="utf-8-sig", errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        cap_m = _CAPITAL_RE.search(text)
+        party_m = _RULING_PARTY_RE.search(text)
+        out[tag] = {
+            "capital_state": int(cap_m.group(1)) if cap_m else 0,
+            "ruling_party": party_m.group(1) if party_m else "",
+        }
+    return out

@@ -56,8 +56,13 @@ def _populate_imported_data(project, result: dict) -> None:
         sr_mgr._next_id = max(sr_mgr._regions.keys()) + 1
 
     # 填充 country（从 states 的 owner 提取）
-    # 填充 country（从 states 的 owner 提取，用 MOD 定义的颜色）
+    # 颜色来自 colors.txt; 国名查本地化 (GER → "德意志国"/"German Reich");
+    # 首都/政体来自 history/countries/ (注意原版 capital 是 State ID,
+    # 我们的 CountryData.capital 是省份 ID, 这里换算)
     country_colors = result.get("country_colors", {})
+    country_history = result.get("country_history", {})
+    loc_map = result.get("localisation", {})
+    states_by_id = {sd["id"]: sd for sd in result.get("states", [])}
     owners = set(sd.get("owner", "") for sd in result.get("states", []))
     owners.discard("")
     for tag in sorted(owners):
@@ -75,9 +80,23 @@ def _populate_imported_data(project, result: dict) -> None:
                     max(60, min(220, h & 0xFF)),
                 )
             try:
-                project.country_mgr.create_country(tag, name=tag, color=color)
+                # 导入的国家本来就是 vanilla/MOD 的 TAG, 必须放行
+                project.country_mgr.create_country(
+                    tag, name=loc_map.get(tag, tag), color=color,
+                    allow_vanilla_tag=True)
             except ValueError:
                 continue  # 非法 TAG 直接跳过
+            ch = country_history.get(tag)
+            if ch:
+                if ch.get("ruling_party") in (
+                        "democratic", "fascism", "communism", "neutrality"):
+                    project.country_mgr.set_ruling_party(tag, ch["ruling_party"])
+                # 首都: State ID → 该 State 内的省份 (优先最高分 VP, 它就是首都城市)
+                cap_state = states_by_id.get(ch.get("capital_state", 0))
+                if cap_state and cap_state.get("provinces"):
+                    vps = cap_state.get("victory_points", {})
+                    cap_pid = max(vps, key=vps.get) if vps else cap_state["provinces"][0]
+                    project.country_mgr.set_capital(tag, int(cap_pid))
         # 分配 state 到国家
         for sd in result.get("states", []):
             if sd.get("owner") == tag:
