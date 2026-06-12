@@ -423,6 +423,22 @@ def export_mod(
             stats=report.stats,
         )
 
+    # ── 省份编号空洞提示 ──
+    # 合并省份留下的 ID 空洞由导出器在导出副本上自动压实, 项目数据不变
+    if scope is None or scope.get("compact_ids", True):
+        _ids = np.unique(canvas.province_map)
+        _nonzero = _ids[_ids > 0]
+        _gap_count = int(_nonzero[-1]) - len(_nonzero) if len(_nonzero) else 0
+        if _gap_count > 0:
+            report = ExportReport(
+                warnings=report.warnings,
+                fixed=list(report.fixed) + [
+                    f"检测到 {_gap_count} 个省份编号空洞 (合并省份留下的), "
+                    f"导出文件已自动压实为连续编号, 项目数据保持不变"
+                ],
+                stats=report.stats,
+            )
+
     # ── 执行导出 ──
     from export.mod_exporter import export_full_mod
     export_full_mod(

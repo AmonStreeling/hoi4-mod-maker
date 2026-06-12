@@ -67,18 +67,37 @@ def export_full_mod(
     def _enabled(key: str) -> bool:
         return scope.get(key, True)
 
-    # 压实省份 ID（可选，导入 MOD 时建议关闭以保留原 ID）
+    # 清理 < 8 像素的碎屑省份，合并到最大相邻省份（只改导出副本）。
+    # 必须在压实之前做：碎屑被吞掉本身会产生新的 ID 空洞
+    province_map = _merge_tiny_provinces(province_map, min_pixels=8)
+
+    # 压实省份 ID（可选，导入 MOD 时建议关闭以保留原 ID）。
+    # 只作用于导出副本：province_map 上一步已是拷贝，引用省份 ID 的
+    # manager 深拷贝后再重编号——项目本体（含撤销历史）不受影响。
+    # 即使 ID 已连续也要跑：mapping 同时清掉指向已删省份的死引用
     if _enabled("compact_ids"):
+        import copy as _copy
+        state_mgr = _copy.deepcopy(state_mgr)
+        country_mgr = _copy.deepcopy(country_mgr)
+        strategic_region_mgr = _copy.deepcopy(strategic_region_mgr)
+        continent_mgr = _copy.deepcopy(continent_mgr)
+        adjacency_mgr = _copy.deepcopy(adjacency_mgr)
+        railway_mgr = _copy.deepcopy(railway_mgr)
+        supply_mgr = _copy.deepcopy(supply_mgr)
+        adjacency_rule_mgr = _copy.deepcopy(adjacency_rule_mgr)
         from domain.map_data import MapData as _MD
         _tmp = _MD.__new__(_MD)
         _tmp.province_map = province_map
         _tmp.tile_map = tile_map
-        _tmp.compact_with_references(state_mgr=state_mgr, country_mgr=country_mgr,
-                                     strategic_region_mgr=strategic_region_mgr)
-    province_count = int(province_map.max())
-
-    # 清理 < 8 像素的碎屑省份，合并到最大相邻省份（只改导出副本）
-    province_map = _merge_tiny_provinces(province_map, min_pixels=8)
+        _tmp.provincial_terrain = dict(provincial_terrain) if provincial_terrain else {}
+        _tmp.compact_with_references(
+            state_mgr=state_mgr, country_mgr=country_mgr,
+            strategic_region_mgr=strategic_region_mgr,
+            continent_mgr=continent_mgr, adjacency_mgr=adjacency_mgr,
+            railway_mgr=railway_mgr, supply_mgr=supply_mgr,
+            adjacency_rule_mgr=adjacency_rule_mgr,
+        )
+        provincial_terrain = _tmp.provincial_terrain
     province_count = int(province_map.max())
 
     colors = generate_province_colors(province_count)

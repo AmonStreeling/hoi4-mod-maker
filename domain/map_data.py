@@ -194,17 +194,29 @@ class MapData:
         country_mgr=None,
         strategic_region_mgr=None,
         tracked_pids: list[int] | None = None,
+        continent_mgr=None,
+        adjacency_mgr=None,
+        railway_mgr=None,
+        supply_mgr=None,
+        adjacency_rule_mgr=None,
     ) -> dict[int, int]:
         """压实 province_map 的 ID，并同步更新所有引用省份 ID 的地方。
 
         这是修改省份的"安全收尾"——任何会删除省份的操作（合并/扩张吃光邻居）
         结束后必须调这个，避免 ID gap 导致 HOI4 文档警告的属性串位灾难。
 
+        self.provincial_terrain（省份级地形，按 pid 键控）也会同步重映射。
+
         参数：
             state_mgr: StateManager — 更新 state.provinces / victory_points / province_to_state
             country_mgr: CountryManager — 更新 country.capital
             strategic_region_mgr: StrategicRegionManager — 更新 region.province_ids
             tracked_pids: 调用方想追踪的额外 pid 列表（如选中的省份）
+            continent_mgr: ContinentManager — 更新省份→大陆指派
+            adjacency_mgr: AdjacencyManager — 更新邻接的 from/to/through
+            railway_mgr: RailwayManager — 更新铁路经过的省份
+            supply_mgr: SupplyNodeManager — 更新补给节点省份
+            adjacency_rule_mgr: AdjacencyRuleManager — 更新规则的 required/icon 省份
 
         返回：
             {old_id: new_id} 映射，调用方用它更新自己持有的 pid 引用
@@ -274,6 +286,23 @@ class MapData:
                         seen.add(mapping[p])
                         new_provs.append(mapping[p])
                 region.province_ids = new_provs
+
+        # 更新 continent / adjacency / railway / supply / adjacency_rule
+        # 它们的 remap_provinces 自带死引用清理：不在 mapping 里的省份被丢弃。
+        # mapping 可能含 0:0（未分配像素），剔除后引用 0 号的脏数据也会被清掉
+        ref_mapping = {o: n for o, n in mapping.items() if o != 0}
+        for mgr in (continent_mgr, adjacency_mgr, railway_mgr,
+                    supply_mgr, adjacency_rule_mgr):
+            if mgr is not None:
+                mgr.remap_provinces(ref_mapping)
+
+        # 省份级地形（definition.csv 战斗属性）同样按 pid 键控
+        if self.provincial_terrain:
+            self.provincial_terrain = {
+                mapping[pid]: t
+                for pid, t in self.provincial_terrain.items()
+                if mapping.get(pid, 0) != 0
+            }
 
         return mapping
 
