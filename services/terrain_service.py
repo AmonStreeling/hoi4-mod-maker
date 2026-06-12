@@ -345,11 +345,14 @@ def apply_mountain_ridge(
 ) -> np.ndarray:
     """在高度图上沿给定点序列画山脉。
 
-    算法参考 mapgen4 距离场方式：
-    1. 沿 points 连线生成山脊线像素
-    2. 计算每个陆地像素到山脊线的最短距离
-    3. 高度 = peak_height * exp(-distance / falloff_distance)
-    4. 与原高度取 max（叠加而非覆盖）
+    算法（2026-06 升级为真实山链, 不再是均匀"土堆"）：
+    1. 沿 points 连线生成山脊线像素 → 距离场
+    2. 山脊剖面: 距离衰减 (指数略锐化, 山脊有棱)
+    3. 沿脊起伏: 脊状分形噪声让一条线上长出主峰与垭口
+    4. 山麓质感: 分形细节随山体权重衰减, 平地不受污染
+    5. 与原高度取 max（叠加而非覆盖）+ 量化抖动防梯田纹
+
+    种子由画线坐标决定: 同一条线反复调滑条, 山形保持稳定。
 
     参数:
         height_map: (H, W) uint8, 现有高度图
@@ -360,6 +363,7 @@ def apply_mountain_ridge(
         ridge_width: 山脊宽度（像素）
     """
     from scipy.ndimage import distance_transform_edt
+    from domain.generators.heightmap import _fbm
 
     if len(points) < 2:
         return height_map
@@ -368,23 +372,31 @@ def apply_mountain_ridge(
     result = height_map.copy().astype(np.float32)
     land = tile_map == TILE_LAND
 
-    # 1. 在二值图上画山脊线（1像素宽，沿 points 连线）
+    # 1. 在二值图上画山脊线（沿 points 连线）
     ridge_mask = np.zeros((h, w), dtype=bool)
     for i in range(len(points) - 1):
         y0, x0 = points[i]
         y1, x1 = points[i + 1]
         _draw_line(ridge_mask, y0, x0, y1, x1, int(ridge_width))
 
-    # 2. 计算到山脊线的距离
-    # distance_transform_edt 计算非零像素到最近零像素的距离
-    # 我们要非山脊像素到山脊的距离，所以取反
-    inv_mask = ~ridge_mask
-    dist = distance_transform_edt(inv_mask).astype(np.float32)
+    # 2. 到山脊线的距离 → 山体权重 (0~1, 略锐化让脊有棱)
+    dist = distance_transform_edt(~ridge_mask).astype(np.float32)
+    body = np.exp(-(dist / max(falloff_distance, 1.0)) ** 1.25)
 
-    # 3. 高度衰减：指数衰减
-    ridge_height = peak_height * np.exp(-dist / max(falloff_distance, 1.0))
+    # 3. 沿脊起伏: 同一条线种子固定, 调滑条时山形不跳变
+    seed = hash(tuple(map(tuple, points))) & 0xFFFF
+    rng = np.random.default_rng(seed)
+    ridged = 1.0 - np.abs(_fbm(rng, (h, w), ((36.0, 1.0), (18.0, 0.5))))
+    profile = 0.55 + 0.45 * np.clip(ridged, 0.0, 1.0) ** 2  # 垭口0.55~主峰1.0
 
-    # 4. 只叠加到陆地，取 max
+    # 4. 山麓分形质感 (随山体权重衰减)
+    detail = _fbm(rng, (h, w), ((9.0, 1.0), (4.0, 0.5))) * 10.0 * body
+
+    ridge_height = peak_height * body * profile + detail
+    # 量化抖动: 防止缓坡出现整数阶梯"梯田纹"
+    ridge_height += rng.uniform(-0.6, 0.6, ridge_height.shape).astype(np.float32)
+
+    # 5. 只叠加到陆地，取 max
     result[land] = np.maximum(result[land], ridge_height[land])
 
     # 强制约束
