@@ -30,7 +30,10 @@ from services.game_assets import GameAssets
 def _load_project_layers(proj_path: str):
     tile_map, _pm, terrain_map, height_map, river_map, _pt, _snap = load_project(
         proj_path, StateManager(), CountryManager())
-    return tile_map, terrain_map, height_map, river_map, None
+    # 自制地图没有手绘色调图 → 按纬度/海拔自动生成气候色调
+    from domain.preview.climate_tint import generate_climate_tint
+    tint = generate_climate_tint(tile_map, height_map)
+    return tile_map, terrain_map, height_map, river_map, tint
 
 
 def _load_vanilla_layers(assets: GameAssets):

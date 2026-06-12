@@ -18,10 +18,13 @@ import numpy as np
 from data.constants import TILE_LAND, SEA_LEVEL
 
 # 水体配色 (近似 vanilla 观感): 深海 → 浅滩 线性渐变
-DEEP_WATER_RGB = np.array([8, 27, 64], dtype=np.float32)
-SHALLOW_WATER_RGB = np.array([45, 110, 160], dtype=np.float32)
+DEEP_WATER_RGB = np.array([14, 41, 88], dtype=np.float32)
+SHALLOW_WATER_RGB = np.array([62, 138, 178], dtype=np.float32)
 # 渐变跨越的深度范围 (高度图单位); 比 SEA_LEVEL 低这么多就是纯深海色
 WATER_DEPTH_RANGE = 40.0
+# 近岸浅滩过渡带: 模糊半径 (像素) 与提亮强度
+COAST_GLOW_SIGMA = 24.0
+COAST_GLOW_STRENGTH = 1.4
 
 # 河流颜色 (略亮于浅滩, 在陆地上才看得清)
 RIVER_RGB = np.array([60, 120, 190], dtype=np.float32)
@@ -111,10 +114,17 @@ def compose_preview(
     rgb = base * shade[:, :, None]
 
     # ── 3. 海洋/湖泊按深度着色 ──
+    # 自制地图海底往往是一马平川 → 单纯按深度会得到一整片死蓝。
+    # 叠加"近岸浅滩": 陆地掩码高斯模糊后在水侧形成发亮的海岸过渡带
+    # (vanilla 的海岸观感来自大陆架高度数据, 这里用距离近似)。
     water = tile_map != TILE_LAND
     if np.any(water):
+        from scipy.ndimage import gaussian_filter
         depth = SEA_LEVEL - height_map.astype(np.float32)
-        t = np.clip(depth / WATER_DEPTH_RANGE, 0.0, 1.0)[:, :, None]
+        t = np.clip(depth / WATER_DEPTH_RANGE, 0.0, 1.0)
+        coast_glow = gaussian_filter(
+            (tile_map == TILE_LAND).astype(np.float32), COAST_GLOW_SIGMA)
+        t = np.clip(t - coast_glow * COAST_GLOW_STRENGTH, 0.0, 1.0)[:, :, None]
         water_rgb = SHALLOW_WATER_RGB * (1.0 - t) + DEEP_WATER_RGB * t
         rgb[water] = water_rgb[water]
 
