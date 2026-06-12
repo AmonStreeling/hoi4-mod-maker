@@ -15,16 +15,16 @@ def test_container_creates_all_managers():
     assert c.command_bus is not None
 
 
-def test_container_registers_12_map_features():
+def test_container_registers_all_map_features():
     from app.container import AppContainer
     c = AppContainer()
-    assert c.map_feature_count() == 12
+    assert c.map_feature_count() == 13
     ids = {f.id for f in c.features.by_category("map")}
     assert ids == {
         "map.land", "map.province", "map.terrain", "map.height",
         "map.state", "map.country", "map.river", "map.continent",
         "map.logistics", "map.colormap", "map.default_map",
-        "map.strategic_region",
+        "map.strategic_region", "map.preview",
     }
 
 

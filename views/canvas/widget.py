@@ -511,7 +511,7 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
             "land", "terrain", "height", "province",
             "state", "country", "river", "logistics",
             "continent", "strategic_region", "colormap", "default_map",
-            "province_terrain",
+            "province_terrain", "preview",
         )
         if mode not in _VALID:
             return

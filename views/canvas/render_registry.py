@@ -26,6 +26,8 @@ DEFAULT_RENDERERS: dict[str, str] = {
     "continent": "features.map.continent.renderer",
     "strategic_region": "features.map.strategic_region.renderer",
     "province_terrain": "features.map.province_terrain.renderer",
+    # 预览: 整图合成, 无 partial_render (自动回退全量)
+    "preview": "features.map.preview.renderer",
     # 暂无专用渲染的模式复用 land
     "colormap": "features.map.land.renderer",
     "default_map": "features.map.land.renderer",

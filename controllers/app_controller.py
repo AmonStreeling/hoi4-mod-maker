@@ -82,7 +82,7 @@ class ApplicationController:
         "height": "高度", "state": "State", "country": "国家",
         "river": "河流", "continent": "大洲", "logistics": "后勤",
         "strategic_region": "战略区", "colormap": "总览贴图",
-        "default_map": "地图配置",
+        "default_map": "地图配置", "preview": "预览",
     }
 
     def on_mode_changed(self, mode: str) -> str:

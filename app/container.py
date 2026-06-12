@@ -34,6 +34,7 @@ from features.map.logistics import LogisticsFeature
 from features.map.colormap import ColormapFeature
 from features.map.default_map import DefaultMapFeature
 from features.map.strategic_region import StrategicRegionFeature
+from features.map.preview import PreviewFeature
 
 # content features (2.0 空壳, 当前不在 UI 暴露)
 from features.content.tech_tree import TechTreeFeature
@@ -81,6 +82,7 @@ class AppContainer:
             ColormapFeature(),
             DefaultMapFeature(),
             StrategicRegionFeature(),
+            PreviewFeature(),
         ]:
             self.features.register(f)
 

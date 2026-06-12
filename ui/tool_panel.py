@@ -57,6 +57,9 @@ _NAV_MODES: list[tuple[str, str, str, list[tuple[str, str, str]], str]] = [
         ("strategic_region", "tab_strategic_region", "🟠"),
         ("logistics", "tab_logistics", "🟠"),
     ], "nav_tooltip_logistics"),
+    ("preview_group", "👁", "nav_preview", [
+        ("preview", "", "🎨"),
+    ], "nav_tooltip_preview"),
     ("settings_group", "⚙", "nav_settings", [
         ("colormap", "tab_colormap", "🎨"),
         ("default_map", "tab_default_map", "🟠"),
@@ -281,6 +284,8 @@ class ToolPanel(QWidget):
     ridge_cancelled = pyqtSignal()
     refine_lasso_mode_toggled = pyqtSignal(bool)
     export_requested = pyqtSignal()
+    preview_refresh_requested = pyqtSignal()
+    preview_game_dir_changed = pyqtSignal(str)
     split_mode_toggled = pyqtSignal(bool)
     lasso_province_toggled = pyqtSignal(bool)
     merge_mode_toggled = pyqtSignal(bool)
@@ -435,6 +440,7 @@ class ToolPanel(QWidget):
         from features.map.logistics.page import LogisticsPage
         from features.map.colormap.page import ColormapPage
         from features.map.default_map.page import DefaultMapPage
+        from features.map.preview.page import PreviewPage
 
         # 创建实例
         self._land_page = LandPage()
@@ -451,6 +457,7 @@ class ToolPanel(QWidget):
         self._logistics_page = LogisticsPage()
         self._colormap_page = ColormapPage()
         self._default_map_page = DefaultMapPage()
+        self._preview_page = PreviewPage()
 
         # 按 mode_id 顺序加入 stack
         page_list = [
@@ -468,6 +475,7 @@ class ToolPanel(QWidget):
             ("logistics", self._logistics_page),
             ("colormap", self._colormap_page),
             ("default_map", self._default_map_page),
+            ("preview", self._preview_page),
         ]
         self._pages: dict[str, QWidget] = {}
         self._mode_index: dict[str, int] = {}
@@ -491,6 +499,7 @@ class ToolPanel(QWidget):
         self._connect_logistics_signals()
         self._connect_colormap_signals()
         self._connect_default_map_signals()
+        self._connect_preview_signals()
 
     def _connect_land_signals(self) -> None:
         p = self._land_page
@@ -617,6 +626,11 @@ class ToolPanel(QWidget):
         p.default_map_tree_add_requested.connect(self.default_map_tree_add_requested)
         p.default_map_tree_del_requested.connect(self.default_map_tree_del_requested)
         p.default_map_tree_reset_requested.connect(self.default_map_tree_reset_requested)
+
+    def _connect_preview_signals(self) -> None:
+        p = self._preview_page
+        p.refresh_requested.connect(self.preview_refresh_requested)
+        p.game_dir_changed.connect(self.preview_game_dir_changed)
 
     # ── 属性 (保持与 MainWindow 的兼容) ──────────────────────
     @property

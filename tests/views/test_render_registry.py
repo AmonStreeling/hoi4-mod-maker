@@ -46,13 +46,21 @@ def test_default_registry_covers_all_valid_modes():
         assert mode in DEFAULT_RENDERERS
 
 
+# partial_render 是可选约定 — 整图合成类渲染器明确豁免 (画布回退全量)
+_NO_PARTIAL_MODES = {"preview"}
+
+
 def test_all_registered_renderer_modules_import():
     """注册表里每个模块路径都能真实 import 且符合渲染器约定。"""
     import importlib
     for mode, path in DEFAULT_RENDERERS.items():
         mod = importlib.import_module(path)
         assert callable(mod.render), f"{mode}: {path} 缺 render()"
-        assert callable(mod.partial_render), f"{mode}: {path} 缺 partial_render()"
+        if mode in _NO_PARTIAL_MODES:
+            assert not hasattr(mod, "partial_render"), \
+                f"{mode} 声明为整图合成, 不应提供 partial_render"
+        else:
+            assert callable(mod.partial_render), f"{mode}: {path} 缺 partial_render()"
 
 
 def test_resolve_renderer_imports_and_caches(canvas):

@@ -291,6 +291,10 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         # 模式切换
         tp.mode_changed.connect(self._on_mode_changed)
 
+        # 预览
+        tp.preview_refresh_requested.connect(self._on_preview_refresh)
+        tp.preview_game_dir_changed.connect(self._on_preview_game_dir_changed)
+
         # 工具/画笔 → 画布 (直通)
         tp.tool_changed.connect(cv.set_tool)
         tp.tile_type_changed.connect(cv.set_tile_type)
@@ -569,11 +573,41 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
     # ═══════════════════════ 模式切换 ═══════════════════════
 
     def _on_mode_changed(self, mode: str) -> None:
-        mode_name = self._app.on_mode_changed(mode)
+        if mode == "preview":
+            # 首次进预览要整图合成 (大图数秒), 给用户等待反馈
+            from PyQt5.QtWidgets import QApplication
+            from PyQt5.QtCore import Qt
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            try:
+                mode_name = self._app.on_mode_changed(mode)
+            finally:
+                QApplication.restoreOverrideCursor()
+        else:
+            mode_name = self._app.on_mode_changed(mode)
         self._status_mode.setText(tr("status_mode").format(mode=mode_name))
         # 进入省份模式时检测 ID 空洞
         if mode == "province":
             self._check_province_gaps()
+
+    def _on_preview_refresh(self) -> None:
+        """预览页"刷新预览": 清合成缓存, 在预览模式则立即重新合成。"""
+        from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtCore import Qt
+        from features.map.preview import renderer as preview_renderer
+        preview_renderer.invalidate_cache(self._canvas)
+        if self._canvas.display_mode == "preview":
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            try:
+                self._canvas._full_render()
+            finally:
+                QApplication.restoreOverrideCursor()
+
+    def _on_preview_game_dir_changed(self, path: str) -> None:
+        """用户选择了游戏目录: 重建资产实例并作废预览缓存。"""
+        from services.game_assets import set_default_install_dir
+        from features.map.preview import renderer as preview_renderer
+        set_default_install_dir(path)
+        preview_renderer.invalidate_cache(self._canvas)
 
     def _check_province_gaps(self) -> None:
         """扫描省份 ID 空洞并更新提示。"""

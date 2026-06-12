@@ -216,3 +216,23 @@ class GameAssets:
             self.last_error = f"{relpath} 尺寸 {arr.shape} 不是 {ATLAS_GRID}×{ATLAS_GRID} 网格"
             return None
         return slice_atlas(arr)
+
+
+# ─────────── 进程级默认实例 (预览渲染器和预览页共享缓存) ───────────
+
+_default_assets: GameAssets | None = None
+
+
+def get_default_assets() -> GameAssets:
+    """取进程级默认 GameAssets, 首次调用时创建。"""
+    global _default_assets
+    if _default_assets is None:
+        _default_assets = GameAssets()
+    return _default_assets
+
+
+def set_default_install_dir(path: str) -> GameAssets:
+    """用户手动选择游戏目录后重建默认实例 (旧缓存全部作废)。"""
+    global _default_assets
+    _default_assets = GameAssets(install_dir=path)
+    return _default_assets
