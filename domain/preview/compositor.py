@@ -76,6 +76,7 @@ def compose_preview(
     river_map: np.ndarray | None,
     atlas_tiles: np.ndarray,
     terrain_to_texture: dict[int, int],
+    tint: np.ndarray | None = None,
 ) -> np.ndarray:
     """合成预览图, 返回 (H, W, 3) uint8。
 
@@ -86,6 +87,8 @@ def compose_preview(
         river_map: 河流图 (H, W) uint8, None = 不画河流
         atlas_tiles: 游戏材质瓦片 (N, th, tw, 4) uint8 (game_assets.atlas_tiles)
         terrain_to_texture: 调色板索引 → 瓦片号 (game_assets.terrain_to_texture)
+        tint: 区域色调图 (H, W, 3) uint8, None = 不调色。
+              P社 shader 惯例: 材质 × 色调 × 2 (色调 128 即原色)
     """
     h, w = tile_map.shape
     tile_count, th, tw = atlas_tiles.shape[0], atlas_tiles.shape[1], atlas_tiles.shape[2]
@@ -98,6 +101,10 @@ def compose_preview(
     ty = np.broadcast_to(ys[:, None], (h, w))       # 瓦片内坐标 (平铺采样)
     tx = np.broadcast_to(xs[None, :], (h, w))
     base = atlas_tiles[tex_idx, ty, tx, :3].astype(np.float32)
+
+    # ── 1.5 区域色调 (北非偏黄/西欧偏绿的来源) ──
+    if tint is not None:
+        base = base * (tint.astype(np.float32) / 255.0) * 2.0
 
     # ── 2. 高度光影 ──
     shade = _hillshade(height_map)

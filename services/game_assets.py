@@ -29,6 +29,8 @@ ATLAS_GRID = 4
 TERRAIN_DEF_RELPATH = "common/terrain/00_terrain.txt"
 ATLAS_RELPATH = "map/terrain/atlas0.dds"
 ATLAS_NORMAL_RELPATH = "map/terrain/atlas_normal0.dds"
+# 区域色调图 (RGB=色调, A=城市灯光遮罩); 分辨率是所属地图的一半
+COLORMAP_RGB_RELPATH = "map/terrain/colormap_rgb_cityemissivemask_a.dds"
 
 
 def find_hoi4_install() -> str | None:
@@ -43,12 +45,31 @@ def find_hoi4_install() -> str | None:
 
 
 # 匹配图形地形条目: { ... color = { 索引列表 } ... texture = N ... }
-# categories 块的条目没有 texture 字段 (其 color 是 RGB), 不会被匹配;
-# 含嵌套子块的条目 ([^{}] 无法跨越内层大括号) 同样天然被排除。
-_ENTRY_RE = re.compile(
+# 条目体除 color 的大括号外不含其他大括号 ([^{}] 保证不会跨条目匹配);
+# categories 块的条目没有 texture 字段, 不会被匹配。
+_GFX_ENTRY_RE = re.compile(
     r"\{[^{}]*?color\s*=\s*\{([\d\s]+)\}[^{}]*?texture\s*=\s*(\d+)[^{}]*?\}",
     re.S,
 )
+_TYPE_RE = re.compile(r"type\s*=\s*(\w+)")
+
+
+def parse_graphical_terrain(text: str) -> list[dict]:
+    """解析 00_terrain.txt 的图形地形条目。
+
+    返回 [{"type": "plains", "indices": [0], "texture": 1}, ...]。
+    只认同时具备 color 和 texture 字段的条目 (即 terrain={} 块内容)。
+    """
+    text = re.sub(r"#[^\n]*", "", text)  # 去注释
+    entries: list[dict] = []
+    for m in _GFX_ENTRY_RE.finditer(text):
+        type_m = _TYPE_RE.search(m.group(0))
+        entries.append({
+            "type": type_m.group(1) if type_m else "",
+            "indices": [int(x) for x in m.group(1).split()],
+            "texture": int(m.group(2)),
+        })
+    return entries
 
 
 def parse_terrain_to_texture(text: str) -> dict[int, int]:
@@ -57,14 +78,20 @@ def parse_terrain_to_texture(text: str) -> dict[int, int]:
     一个条目的 color 可以列多个索引, 都映射到同一瓦片。
     texture = 255 (湖泊) 原样保留, 由合成器决定如何处理。
     """
-    text = re.sub(r"#[^\n]*", "", text)  # 去注释
     mapping: dict[int, int] = {}
-    for m in _ENTRY_RE.finditer(text):
-        indices = [int(x) for x in m.group(1).split()]
-        texture = int(m.group(2))
-        for idx in indices:
-            mapping[idx] = texture
+    for e in parse_graphical_terrain(text):
+        for idx in e["indices"]:
+            mapping[idx] = e["texture"]
     return mapping
+
+
+def parse_water_palette_indices(text: str) -> set[int]:
+    """返回 terrain.bmp 中属于水体 (ocean/lakes) 的调色板索引集合。"""
+    water: set[int] = set()
+    for e in parse_graphical_terrain(text):
+        if e["type"] in ("ocean", "lakes"):
+            water.update(e["indices"])
+    return water
 
 
 def slice_atlas(atlas: np.ndarray, grid: int = ATLAS_GRID) -> np.ndarray:
@@ -111,6 +138,31 @@ class GameAssets:
         return self._cached(
             "atlas_normal_tiles", lambda: self._load_dds_tiles(ATLAS_NORMAL_RELPATH))
 
+    def water_palette_indices(self) -> set[int] | None:
+        """terrain.bmp 中水体 (ocean/lakes) 的调色板索引。"""
+        def _load():
+            path = self._abs(TERRAIN_DEF_RELPATH)
+            if path is None:
+                return None
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    return parse_water_palette_indices(f.read())
+            except OSError as e:
+                self.last_error = f"读取 {path} 失败: {e}"
+                return None
+        return self._cached("water_palette_indices", _load)
+
+    def colormap_rgb(self) -> np.ndarray | None:
+        """vanilla 区域色调图 (H, W, 3) uint8 (alpha 通道是城市灯光遮罩, 丢弃)。
+
+        分辨率是 vanilla 地图的一半, 只配 vanilla 地图数据使用;
+        自制地图的色调走本工具自己的 colormap 功能。
+        """
+        def _load():
+            arr = self._read_dds(COLORMAP_RGB_RELPATH)
+            return None if arr is None else arr[:, :, :3]
+        return self._cached("colormap_rgb", _load)
+
     # ─────────── 内部实现 ───────────
 
     def _cached(self, key: str, loader):
@@ -143,18 +195,24 @@ class GameAssets:
             return None
         return mapping
 
-    def _load_dds_tiles(self, relpath: str) -> np.ndarray | None:
+    def _read_dds(self, relpath: str) -> np.ndarray | None:
+        """读取 DDS 为 (H, W, 4) uint8, 失败返回 None。"""
         path = self._abs(relpath)
         if path is None:
             return None
         try:
             from PIL import Image
             with Image.open(path) as im:
-                arr = np.asarray(im.convert("RGBA"))
+                return np.asarray(im.convert("RGBA"))
         except Exception as e:  # PIL 解码失败种类繁多, 统一降级
             self.last_error = f"解码 {path} 失败: {e}"
             return None
+
+    def _load_dds_tiles(self, relpath: str) -> np.ndarray | None:
+        arr = self._read_dds(relpath)
+        if arr is None:
+            return None
         if arr.shape[0] % ATLAS_GRID or arr.shape[1] % ATLAS_GRID:
-            self.last_error = f"{path} 尺寸 {arr.shape} 不是 {ATLAS_GRID}×{ATLAS_GRID} 网格"
+            self.last_error = f"{relpath} 尺寸 {arr.shape} 不是 {ATLAS_GRID}×{ATLAS_GRID} 网格"
             return None
         return slice_atlas(arr)

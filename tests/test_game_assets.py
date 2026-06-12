@@ -10,7 +10,8 @@ import numpy as np
 import pytest
 
 from services.game_assets import (
-    GameAssets, parse_terrain_to_texture, slice_atlas,
+    GameAssets, parse_terrain_to_texture, parse_graphical_terrain,
+    parse_water_palette_indices, slice_atlas,
     TERRAIN_DEF_RELPATH, ATLAS_GRID,
 )
 from data.constants import DEFAULT_HOI4_PATH
@@ -40,9 +41,24 @@ terrain = {
     desert      = { type = desert  color = { 3 } texture = 9 }
     multi       = { type = plains  color = { 20 21 } texture = 7 }  # 多索引
     lake_14     = { type = lakes   color = { 14 } texture = 255 }
+    ocean_15    = { type = ocean   color = { 15 } texture = 9 }
     city        = { type = urban   color = { 13 } texture = 10 spawn_city = yes }
 }
 """
+
+
+def test_parse_graphical_terrain_captures_type():
+    """每个图形地形条目带回 type, 跨条目不会串。"""
+    entries = parse_graphical_terrain(SAMPLE)
+    by_texture = {e["texture"]: e["type"] for e in entries}
+    assert by_texture[1] == "plains"
+    assert by_texture[10] == "urban"
+    assert len(entries) == 6
+
+
+def test_parse_water_palette_indices():
+    """ocean/lakes 类型的调色板索引被识别为水体。"""
+    assert parse_water_palette_indices(SAMPLE) == {14, 15}
 
 
 def test_parse_graphical_terrain_entries():
