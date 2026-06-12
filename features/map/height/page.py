@@ -24,6 +24,7 @@ class HeightPage(QWidget):
     # 输出信号
     height_value_changed = pyqtSignal(int)
     auto_height_requested = pyqtSignal()
+    realistic_height_requested = pyqtSignal()    # 真实感高度图 (山链/平原/大陆架)
     height_from_terrain_requested = pyqtSignal()
     import_heightmap_requested = pyqtSignal()
     ridge_mode_toggled = pyqtSignal(bool)       # 山脉画线模式开关
@@ -70,6 +71,24 @@ class HeightPage(QWidget):
         auto_top_btn.setToolTip(tr("height_auto_top_tooltip"))
         auto_top_btn.clicked.connect(self.auto_height_requested.emit)
         auto_top_layout.addWidget(auto_top_btn)
+
+        realistic_btn = QPushButton(tr("height_btn_realistic"))
+        realistic_btn.setMinimumHeight(40)
+        realistic_btn.setStyleSheet(
+            f"QPushButton {{"
+            f"  background: #2a9d6e;"
+            f"  color: white;"
+            f"  border: none;"
+            f"  border-radius: 6px;"
+            f"  font-size: 14px;"
+            f"  font-weight: 600;"
+            f"  padding: 8px;"
+            f"}}"
+            f"QPushButton:hover {{ background: #34b87f; }}"
+        )
+        realistic_btn.setToolTip(tr("height_btn_realistic_tooltip"))
+        realistic_btn.clicked.connect(self.realistic_height_requested.emit)
+        auto_top_layout.addWidget(realistic_btn)
 
         auto_top_tip = QLabel(tr("height_auto_top_tip"))
         auto_top_tip.setStyleSheet(f"color: {_DIM}; font-size: 12px; padding: 4px 2px;")

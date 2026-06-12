@@ -272,6 +272,7 @@ class ToolPanel(QWidget):
     terrain_brush_size_changed = pyqtSignal(int)
     terrain_soft_edge_changed = pyqtSignal(bool)
     auto_height_requested = pyqtSignal()
+    realistic_height_requested = pyqtSignal()
     height_from_terrain_requested = pyqtSignal()
     import_heightmap_requested = pyqtSignal()
     height_brush_mode_changed = pyqtSignal(str)
@@ -546,6 +547,7 @@ class ToolPanel(QWidget):
         p = self._height_page
         p.height_value_changed.connect(self.height_value_changed)
         p.auto_height_requested.connect(self.auto_height_requested)
+        p.realistic_height_requested.connect(self.realistic_height_requested)
         p.height_from_terrain_requested.connect(self.height_from_terrain_requested)
         p.import_heightmap_requested.connect(self.import_heightmap_requested)
         p.ridge_mode_toggled.connect(self.ridge_mode_toggled)

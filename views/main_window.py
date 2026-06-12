@@ -364,6 +364,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
             lambda s: setattr(self._controllers["terrain"], "soft_edge", s)
         )
         tp.auto_height_requested.connect(self._on_auto_height)
+        tp.realistic_height_requested.connect(self._on_realistic_height)
         tp.height_from_terrain_requested.connect(self._on_height_from_terrain)
         tp.import_heightmap_requested.connect(self._on_import_heightmap)
         tp.height_brush_mode_changed.connect(cv.set_height_brush_mode)

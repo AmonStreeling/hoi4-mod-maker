@@ -2,8 +2,11 @@
 预览渲染 CLI — 用游戏贴图合成预览 PNG, 不开 GUI。
 
 用法:
-    py tools/render_preview.py <project.hoi4proj> [输出.png]   # 渲染项目
-    py tools/render_preview.py vanilla [输出.png]              # 渲染游戏原版地图
+    py tools/render_preview.py <project.hoi4proj> [输出.png]            # 渲染项目
+    py tools/render_preview.py <project.hoi4proj> [输出.png] --enrich   # 演示: 地形自动细化
+    py tools/render_preview.py vanilla [输出.png]                       # 渲染游戏原版地图
+
+--enrich 只在内存里细化地形, 项目文件零改动 — 用于演示效果。
 
 M1 验收工具: 直接看合成效果, 也用于日后排查预览问题。
 vanilla 模式是对照实验: 同样的数据游戏怎么画 vs 我们怎么画,
@@ -27,9 +30,18 @@ from domain.preview.compositor import compose_preview
 from services.game_assets import GameAssets
 
 
-def _load_project_layers(proj_path: str):
+def _load_project_layers(proj_path: str, enrich: bool = False,
+                         realheight: bool = False):
     tile_map, _pm, terrain_map, height_map, river_map, _pt, _snap = load_project(
         proj_path, StateManager(), CountryManager())
+    if realheight:
+        # 演示模式: 内存里重新生成真实感高度图, 不写回项目
+        from domain.generators.heightmap import generate_realistic_heightmap
+        height_map = generate_realistic_heightmap(tile_map)
+    if enrich:
+        # 演示模式: 内存里自动细化地形, 不写回项目
+        from domain.generators.terrain_detail import generate_detailed_terrain
+        terrain_map = generate_detailed_terrain(tile_map, height_map)
     # 自制地图没有手绘色调图 → 按纬度/海拔自动生成气候色调
     from domain.preview.climate_tint import generate_climate_tint
     tint = generate_climate_tint(tile_map, height_map)
@@ -61,12 +73,15 @@ def _load_vanilla_layers(assets: GameAssets):
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
+    args = [a for a in sys.argv[1:] if a not in ("--enrich", "--realheight")]
+    enrich = "--enrich" in sys.argv
+    realheight = "--realheight" in sys.argv
+    if not args:
         print(__doc__)
         return 2
-    source = sys.argv[1]
+    source = args[0]
     default_out = "preview_vanilla.png" if source == "vanilla" else "preview.png"
-    out_path = sys.argv[2] if len(sys.argv) > 2 else default_out
+    out_path = args[1] if len(args) > 1 else default_out
 
     assets = GameAssets()
     if not assets.available():
@@ -84,7 +99,7 @@ def main() -> int:
             _load_vanilla_layers(assets)
     else:
         tile_map, terrain_map, height_map, river_map, tint = \
-            _load_project_layers(source)
+            _load_project_layers(source, enrich=enrich, realheight=realheight)
     set_map_size(tile_map.shape[1], tile_map.shape[0])
     t1 = time.perf_counter()
 

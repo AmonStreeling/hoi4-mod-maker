@@ -113,9 +113,12 @@ def generate_detailed_terrain(
     base[marsh] = IDX_MARSH
 
     # ── 4. 海拔叠加 (覆盖基调, 变体跟随气候带) ──
+    # 注意: 通用丘陵贴图 (IDX_HILLS→atlas 瓦片2) 是干旱沙色调,
+    # 温带丘陵直接用它会让整图发黄 — 湿润带丘陵保留植被贴图,
+    # 立体感交给高度光影; 只有干旱带丘陵用沙色丘陵贴图
     hills = hf >= HILL_START
-    base[hills] = IDX_HILLS
     base[hills & desert] = IDX_DESERT_HILLS
+    base[hills & (lat >= DESERT_END) & (variant_noise > 0.45)] = IDX_HILLS
 
     mountains = hf >= MOUNTAIN_START
     base[mountains] = IDX_MOUNTAIN
