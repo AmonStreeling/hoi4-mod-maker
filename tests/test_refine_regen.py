@@ -57,6 +57,26 @@ def test_regenerate_deterministic_and_seed_varies():
     assert not np.array_equal(a, c)
 
 
+def test_sea_floor_rebuilt_unconditionally():
+    """mask 含海洋时海底重建为大陆架坡度 — 即使精修强度为零。
+
+    海底不是创作内容, 混乱遗留数据由算法无条件接管 (用户反馈:
+    "海洋很混乱, 我不可能自己改")。
+    """
+    tile_map, height_map = _world()
+    height_map[:, :30] = 93                     # 混乱旧海底: 几乎贴着海平面
+    mask = np.ones(tile_map.shape, dtype=bool)
+
+    out = refine_heightmap_region(
+        height_map, mask, tile_map, strength=0.0,
+        enable_ridge=False, enable_erosion=False)
+
+    assert int(out[100, 29]) > int(out[100, 2])          # 近岸浅, 远海深
+    assert int(out[:, :30].max()) < SEA_LEVEL            # 全部压回海平面下
+    land = tile_map == TILE_LAND
+    assert np.array_equal(out[land], height_map[land])   # 强度0: 陆地不动
+
+
 def test_command_undo_restores_exactly():
     """走命令路径: 执行改变选区, 撤销逐像素还原。"""
     from types import SimpleNamespace

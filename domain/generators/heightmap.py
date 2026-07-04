@@ -144,6 +144,28 @@ def generate_realistic_heightmap(
     return elev.astype(np.uint8)
 
 
+def rebuild_sea_floor(
+    height_map: np.ndarray,
+    tile_map: np.ndarray,
+    shelf_width: float = 60.0,
+) -> np.ndarray:
+    """只重建海底 (大陆架坡度), 陆地一个像素不动。
+
+    海底不是创作内容 — 没有作者会手画海底, 混乱的海底高度
+    (导入/旧版生成的遗留) 应当由算法无条件接管:
+    近岸 = 海平面下缓坡, 随离岸距离落向深海。
+    """
+    land = tile_map == TILE_LAND
+    d_sea = distance_transform_edt(~land).astype(np.float32)
+    shelf_t = np.clip(d_sea / max(shelf_width, 1.0), 0.0, 1.0)
+    sea_depth = SEA_CEILING - 4.0 - shelf_t * (SEA_CEILING - 4.0 - OCEAN_HEIGHT)
+
+    result = height_map.copy()
+    sea = ~land
+    result[sea] = np.clip(sea_depth[sea], 0, SEA_CEILING).astype(np.uint8)
+    return result
+
+
 # ── 标准生成器接口 ──
 
 class RealisticHeightmapGenerator:

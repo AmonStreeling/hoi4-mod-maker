@@ -45,6 +45,24 @@ class HeightPage(QWidget):
         super().__init__(parent)
         self._init_ui()
 
+    def _on_generate_menu(self) -> None:
+        """单一生成入口: 弹出选择题, 按用户情况发射对应的既有信号。"""
+        from ui.option_dialog import OptionChooserDialog
+        key = OptionChooserDialog.choose(self, tr("height_gen_menu_title"), [
+            ("realistic", tr("height_gen_opt_realistic"),
+             tr("height_gen_opt_realistic_desc")),
+            ("refine", tr("height_gen_opt_refine"),
+             tr("height_gen_opt_refine_desc")),
+            ("from_terrain", tr("height_gen_opt_from_terrain"),
+             tr("height_gen_opt_from_terrain_desc")),
+        ])
+        if key == "realistic":
+            self.realistic_height_requested.emit()
+        elif key == "refine":
+            self.refine_whole_map_requested.emit()
+        elif key == "from_terrain":
+            self.height_from_terrain_requested.emit()
+
     def _init_ui(self) -> None:
         lay = QVBoxLayout(self)
         lay.setContentsMargins(8, 8, 8, 8)
@@ -55,9 +73,11 @@ class HeightPage(QWidget):
         auto_top_box = _make_section(tr("height_auto_top_section"))
         auto_top_layout = auto_top_box.layout()
 
-        auto_top_btn = QPushButton(tr("height_auto_top_btn"))
-        auto_top_btn.setMinimumHeight(44)
-        auto_top_btn.setStyleSheet(
+        # 单一入口: 三种生成/优化方式收进一个"说人话的选择题"对话框
+        # (2026-07-04 用户反馈"按钮太多不知道点哪个" — 每页只留一个生成入口)
+        gen_menu_btn = QPushButton(tr("height_btn_generate_menu"))
+        gen_menu_btn.setMinimumHeight(44)
+        gen_menu_btn.setStyleSheet(
             f"QPushButton {{"
             f"  background: {_ACCENT};"
             f"  color: white;"
@@ -69,49 +89,14 @@ class HeightPage(QWidget):
             f"}}"
             f"QPushButton:hover {{ background: #9090ff; }}"
         )
-        auto_top_btn.setToolTip(tr("height_auto_top_tooltip"))
-        auto_top_btn.clicked.connect(self.auto_height_requested.emit)
-        auto_top_layout.addWidget(auto_top_btn)
+        gen_menu_btn.setToolTip(tr("height_btn_generate_menu_tooltip"))
+        gen_menu_btn.clicked.connect(self._on_generate_menu)
+        auto_top_layout.addWidget(gen_menu_btn)
 
-        realistic_btn = QPushButton(tr("height_btn_realistic"))
-        realistic_btn.setMinimumHeight(40)
-        realistic_btn.setStyleSheet(
-            f"QPushButton {{"
-            f"  background: #2a9d6e;"
-            f"  color: white;"
-            f"  border: none;"
-            f"  border-radius: 6px;"
-            f"  font-size: 14px;"
-            f"  font-weight: 600;"
-            f"  padding: 8px;"
-            f"}}"
-            f"QPushButton:hover {{ background: #34b87f; }}"
-        )
-        realistic_btn.setToolTip(tr("height_btn_realistic_tooltip"))
-        realistic_btn.clicked.connect(self.realistic_height_requested.emit)
-        auto_top_layout.addWidget(realistic_btn)
-
-        auto_top_tip = QLabel(tr("height_auto_top_tip"))
+        auto_top_tip = QLabel(tr("height_gen_menu_tip"))
         auto_top_tip.setStyleSheet(f"color: {_DIM}; font-size: 12px; padding: 4px 2px;")
         auto_top_tip.setWordWrap(True)
         auto_top_layout.addWidget(auto_top_tip)
-
-        # 从地形反推高度 (用户已经画好地形, 但高度图丑时一键重建)
-        from_terrain_btn = QPushButton(tr("height_from_terrain_btn"))
-        from_terrain_btn.setMinimumHeight(36)
-        from_terrain_btn.setStyleSheet(
-            "QPushButton { background: #2563eb; color: white; border: none;"
-            " border-radius: 6px; font-size: 13px; font-weight: 600; padding: 6px; }"
-            "QPushButton:hover { background: #3b82f6; }"
-        )
-        from_terrain_btn.setToolTip(tr("height_from_terrain_tooltip"))
-        from_terrain_btn.clicked.connect(self.height_from_terrain_requested.emit)
-        auto_top_layout.addWidget(from_terrain_btn)
-
-        from_terrain_tip = QLabel(tr("height_from_terrain_tip"))
-        from_terrain_tip.setStyleSheet(f"color: {_DIM}; font-size: 12px; padding: 2px 2px;")
-        from_terrain_tip.setWordWrap(True)
-        auto_top_layout.addWidget(from_terrain_tip)
 
         # 导入高度图 — 也是"一次性整图操作"，跟上面两个并排
         import_btn = QPushButton(tr("height_import_btn"))
@@ -253,12 +238,6 @@ class HeightPage(QWidget):
         # ── 局部精修（套索选区 → 山脊/侵蚀/噪声） ──
         refine_box = _make_section(tr("height_section_refine"))
         rfl = refine_box.layout()
-
-        whole_btn = QPushButton(tr("height_btn_refine_whole"))
-        whole_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
-        whole_btn.setToolTip(tr("height_btn_refine_whole_tooltip"))
-        whole_btn.clicked.connect(self.refine_whole_map_requested.emit)
-        rfl.addWidget(whole_btn)
 
         self._refine_btn = QPushButton(tr("height_btn_refine"))
         self._refine_btn.setCheckable(True)

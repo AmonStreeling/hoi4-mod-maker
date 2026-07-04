@@ -1209,17 +1209,18 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
     def _on_refine_whole_map(self) -> None:
         """保形精修整张高度图: 你画的布局(哪高哪低)不变, 全图叠加质感。
 
-        复用局部精修的对话框/命令, mask = 全部陆地。
+        mask = 全图: 陆地走保形精修, 海底则无条件重建为大陆架坡度
+        (海底不是创作内容, 混乱遗留数据由算法接管)。
         对话框里勾"从零重新生成"则变成全图重做 (等价一键生成)。
         """
         import numpy as np
         from data.constants import TILE_LAND
         map_data = self._project.map_data
-        mask = map_data.tile_map == TILE_LAND
-        if not bool(mask.any()):
+        if not bool((map_data.tile_map == TILE_LAND).any()):
             QMessageBox.information(
                 self, tr("refine_dlg_title"), tr("refine_whole_no_land"))
             return
+        mask = np.ones(map_data.tile_map.shape, dtype=bool)
         self._run_refine_dialog(mask)
 
     def _run_refine_dialog(self, mask) -> None:

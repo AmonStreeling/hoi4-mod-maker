@@ -91,6 +91,21 @@ class TerrainPage(QWidget):
         super().__init__(parent)
         self._init_ui()
 
+    def _on_generate_menu(self) -> None:
+        """单一生成入口: 弹出选择题, 按用户情况发射对应的既有信号。"""
+        from ui.option_dialog import OptionChooserDialog
+        key = OptionChooserDialog.choose(self, tr("terrain_gen_menu_title"), [
+            ("detail", tr("terrain_gen_opt_detail"),
+             tr("terrain_gen_opt_detail_desc")),
+            ("beautify", tr("terrain_gen_opt_beautify"),
+             tr("terrain_gen_opt_beautify_desc")),
+        ])
+        seed = self._seed_spin.value()
+        if key == "detail":
+            self.detail_terrain_requested.emit(seed)
+        elif key == "beautify":
+            self.beautify_terrain_requested.emit(seed)
+
     def _init_ui(self) -> None:
         outer = QVBoxLayout(self)
         outer.setContentsMargins(8, 8, 8, 8)
@@ -111,24 +126,13 @@ class TerrainPage(QWidget):
         gen_box = _make_section(tr("terrain_section_auto_gen"))
         gl = gen_box.layout()
 
-        auto_btn = QPushButton(tr("terrain_btn_auto_gen"))
-        auto_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
-        auto_btn.clicked.connect(self.auto_terrain_requested.emit)
-        gl.addWidget(auto_btn)
-
-        detail_btn = QPushButton(tr("terrain_btn_detail_gen"))
-        detail_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
-        detail_btn.setToolTip(tr("terrain_btn_detail_gen_tooltip"))
-        detail_btn.clicked.connect(
-            lambda: self.detail_terrain_requested.emit(self._seed_spin.value()))
-        gl.addWidget(detail_btn)
-
-        beautify_btn = QPushButton(tr("terrain_btn_beautify"))
-        beautify_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
-        beautify_btn.setToolTip(tr("terrain_btn_beautify_tooltip"))
-        beautify_btn.clicked.connect(
-            lambda: self.beautify_terrain_requested.emit(self._seed_spin.value()))
-        gl.addWidget(beautify_btn)
+        # 单一入口: 生成方式收进"说人话的选择题"对话框
+        # (2026-07-04 用户反馈"按钮太多不知道点哪个")
+        gen_menu_btn = QPushButton(tr("terrain_btn_generate_menu"))
+        gen_menu_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
+        gen_menu_btn.setToolTip(tr("terrain_btn_generate_menu_tooltip"))
+        gen_menu_btn.clicked.connect(self._on_generate_menu)
+        gl.addWidget(gen_menu_btn)
 
         # 种子
         seed_row = QHBoxLayout()

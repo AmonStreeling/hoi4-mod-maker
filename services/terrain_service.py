@@ -767,6 +767,16 @@ def refine_heightmap_region(
         return _regenerate_heightmap_region(height_map, mask, tile_map, seed)
 
     result = height_map.copy()
+
+    # mask 内的海洋像素: 海底无条件重建为大陆架坡度。
+    # 海底不是创作内容 (没有作者手画海底), 混乱的海底遗留数据
+    # 由算法直接接管 — 与陆地的"保形"原则相反且互补。
+    sea_in_mask = mask & (tile_map != TILE_LAND)
+    if bool(sea_in_mask.any()):
+        from domain.generators.heightmap import rebuild_sea_floor
+        rebuilt = rebuild_sea_floor(height_map, tile_map)
+        result[sea_in_mask] = rebuilt[sea_in_mask]
+
     if strength <= 0 or not (
         enable_ridge or enable_erosion or enable_noise or enable_shrink
     ):
