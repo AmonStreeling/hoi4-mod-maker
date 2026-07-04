@@ -3,4 +3,4 @@ tags={
 	"Utilities"
 }
 name="HOI4 Fantasy World Map Maker"
-supported_version="1.18.*"
+supported_version="1.19.*"

@@ -112,7 +112,9 @@ BMP_BITS_8 = 8
 # 默认 MOD 信息
 DEFAULT_MOD_NAME = "Fantasy World"
 DEFAULT_MOD_VERSION = "0.1"
-DEFAULT_SUPPORTED_VERSION = "1.17.*"
+# 兜底值 — 导出时优先用 services.game_assets.resolve_supported_version()
+# 从本机游戏安装实测版本, 检测不到才用这个
+DEFAULT_SUPPORTED_VERSION = "1.19.*"
 
 # HOI4 路径（用户可配置）
 DEFAULT_HOI4_PATH = "G:/SteamLibrary/steamapps/common/Hearts of Iron IV/"

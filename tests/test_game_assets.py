@@ -154,6 +154,27 @@ def test_stale_config_game_dir_ignored(tmp_path, monkeypatch):
     assert ga._read_config_game_dir() is None
 
 
+def test_detect_supported_version(tmp_path, monkeypatch):
+    """从 launcher-settings.json 解析版本 → '主.次.*'; 坏数据返回 None。"""
+    game = _fake_game_dir(tmp_path)
+    (tmp_path / "game" / "launcher-settings.json").write_text(
+        '{"rawVersion": "1.19.2.0"}', encoding="utf-8")
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text('{"hoi4_game_dir": "%s"}' % str(game).replace("\\", "\\\\"),
+                   encoding="utf-8")
+    monkeypatch.setattr(ga, "CONFIG_PATH", str(cfg))
+
+    assert ga.detect_supported_version() == "1.19.*"
+    assert ga.resolve_supported_version() == "1.19.*"
+
+    # 坏数据 → None, resolve 回退默认常量
+    (tmp_path / "game" / "launcher-settings.json").write_text(
+        '{"rawVersion": "abc"}', encoding="utf-8")
+    from data.constants import DEFAULT_SUPPORTED_VERSION
+    assert ga.detect_supported_version() is None
+    assert ga.resolve_supported_version() == DEFAULT_SUPPORTED_VERSION
+
+
 # ═══════ 真实游戏文件集成 (仅本机) ═══════
 
 _HAS_GAME = os.path.isfile(os.path.join(DEFAULT_HOI4_PATH, TERRAIN_DEF_RELPATH))

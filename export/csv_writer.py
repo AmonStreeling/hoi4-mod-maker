@@ -8,7 +8,7 @@ from data.constants import (
     MAP_WIDTH, MAP_HEIGHT,
     TILE_LAND, TILE_SEA, TILE_LAKE,
     TILE_TYPE_NAMES,
-    DEFAULT_MOD_NAME, DEFAULT_MOD_VERSION, DEFAULT_SUPPORTED_VERSION,
+    DEFAULT_MOD_NAME, DEFAULT_MOD_VERSION,
 )
 from data.terrain_types import DEFAULT_TERRAIN_FOR_TILE
 from domain.validators.province import get_coastal_provinces
@@ -422,7 +422,8 @@ def write_descriptor_mod(output_dir: str, mod_name: str = DEFAULT_MOD_NAME) -> N
         f.write('    "Total Conversion"\n')
         f.write("}\n")
         f.write(f'name="{mod_name}"\n')
-        f.write(f'supported_version="{DEFAULT_SUPPORTED_VERSION}"\n')
+        from services.game_assets import resolve_supported_version
+        f.write(f'supported_version="{resolve_supported_version()}"\n')
         f.write('replace_path="map"\n')
         f.write('replace_path="map/strategicregions"\n')
         f.write('replace_path="map/supplyareas"\n')

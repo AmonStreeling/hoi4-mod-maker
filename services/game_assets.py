@@ -255,6 +255,35 @@ class GameAssets:
         return slice_atlas(arr)
 
 
+def detect_supported_version() -> str | None:
+    """从本机游戏安装检测版本, 返回 descriptor 用的 '主.次.*' 形式。
+
+    读 launcher-settings.json 的 rawVersion (如 "1.19.2.0" → "1.19.*")。
+    游戏更新后导出的 MOD 自动声明新版本, 不再因写死旧版本号被启动器
+    标成"过时"。检测不到 (没装游戏/文件格式变了) 返回 None,
+    调用方回退 data/constants.DEFAULT_SUPPORTED_VERSION。
+    """
+    install = find_hoi4_install()
+    if install is None:
+        return None
+    path = os.path.join(install, "launcher-settings.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f).get("rawVersion", "")
+    except Exception:
+        return None
+    parts = str(raw).split(".")
+    if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+        return f"{parts[0]}.{parts[1]}.*"
+    return None
+
+
+def resolve_supported_version() -> str:
+    """导出 MOD 声明的游戏版本: 优先本机检测, 失败回退默认常量。"""
+    from data.constants import DEFAULT_SUPPORTED_VERSION
+    return detect_supported_version() or DEFAULT_SUPPORTED_VERSION
+
+
 # ─────────── 进程级默认实例 (预览渲染器和预览页共享缓存) ───────────
 
 _default_assets: GameAssets | None = None

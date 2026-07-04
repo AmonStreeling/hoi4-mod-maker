@@ -19,7 +19,7 @@ from data.constants import (
     MAP_WIDTH, MAP_HEIGHT,
     TILE_LAND, TILE_SEA, TILE_LAKE,
     OCEAN_HEIGHT, LAND_BASE_HEIGHT, SEA_LEVEL,
-    DEFAULT_HOI4_PATH, DEFAULT_SUPPORTED_VERSION, REPLACE_PATHS,
+    DEFAULT_HOI4_PATH, REPLACE_PATHS,
 )
 from data.terrain_types import TERRAIN_PALETTE_INDEX, DEFAULT_TERRAIN_FOR_TILE
 from domain.generators.province import generate_provinces, generate_province_colors
@@ -468,12 +468,14 @@ def _write_descriptor(output_dir, level):
         essential_rp.extend([p for p in REPLACE_PATHS if p not in essential_rp])
 
     rp = "\n".join(f'replace_path="{p}"' for p in essential_rp) + "\n"
+    from services.game_assets import resolve_supported_version
+    supported = resolve_supported_version()
 
     with open(os.path.join(output_dir, "descriptor.mod"), "w", encoding="utf-8") as f:
         f.write(f'version="0.1"\n')
         f.write('tags={\n\t"Alternative History"\n\t"Map"\n\t"Total Conversion"\n}\n')
         f.write(f'name="TestMOD_Lv{level}"\n')
-        f.write(f'supported_version="{DEFAULT_SUPPORTED_VERSION}"\n')
+        f.write(f'supported_version="{supported}"\n')
         if rp:
             f.write(rp)
 
@@ -485,7 +487,7 @@ def _write_descriptor(output_dir, level):
         f.write(f'name="TestMOD_Lv{level}"\n')
         if rp:
             f.write(rp)
-        f.write(f'supported_version="{DEFAULT_SUPPORTED_VERSION}"\n')
+        f.write(f'supported_version="{supported}"\n')
         abs_path = os.path.abspath(output_dir).replace("\\", "/")
         f.write(f'path="{abs_path}"\n')
 
