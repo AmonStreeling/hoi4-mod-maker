@@ -35,6 +35,7 @@ class HeightPage(QWidget):
     ridge_cancelled = pyqtSignal()               # 取消山脉
     # 局部精修（套索选区 + 算法精修）
     refine_lasso_mode_toggled = pyqtSignal(bool)
+    refine_whole_map_requested = pyqtSignal()    # 保形精修整张高度图
     # 手动微调画笔
     height_brush_mode_changed = pyqtSignal(str)   # "off" | "raise" | "lower" | "smooth"
     height_brush_size_changed = pyqtSignal(int)
@@ -252,6 +253,12 @@ class HeightPage(QWidget):
         # ── 局部精修（套索选区 → 山脊/侵蚀/噪声） ──
         refine_box = _make_section(tr("height_section_refine"))
         rfl = refine_box.layout()
+
+        whole_btn = QPushButton(tr("height_btn_refine_whole"))
+        whole_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
+        whole_btn.setToolTip(tr("height_btn_refine_whole_tooltip"))
+        whole_btn.clicked.connect(self.refine_whole_map_requested.emit)
+        rfl.addWidget(whole_btn)
 
         self._refine_btn = QPushButton(tr("height_btn_refine"))
         self._refine_btn.setCheckable(True)

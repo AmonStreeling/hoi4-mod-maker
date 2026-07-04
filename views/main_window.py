@@ -381,6 +381,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.ridge_cancelled.connect(self._on_ridge_cancel)
         # 局部精修套索
         tp.refine_lasso_mode_toggled.connect(self._on_refine_lasso_mode)
+        tp.refine_whole_map_requested.connect(self._on_refine_whole_map)
         cv.refine_lasso_drawn.connect(self._on_refine_lasso_drawn)
         cv.province_gaps_detected.connect(
             lambda gaps: self._tool_panel.update_province_gaps(gaps)

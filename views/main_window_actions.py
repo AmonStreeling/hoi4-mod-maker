@@ -1168,6 +1168,32 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
             self._tool_panel._height_page.reset_refine_button()
             return
 
+        self._run_refine_dialog(mask)
+        self._tool_panel._height_page.reset_refine_button()
+
+    def _on_refine_whole_map(self) -> None:
+        """保形精修整张高度图: 你画的布局(哪高哪低)不变, 全图叠加质感。
+
+        复用局部精修的对话框/命令, mask = 全部陆地。
+        对话框里勾"从零重新生成"则变成全图重做 (等价一键生成)。
+        """
+        import numpy as np
+        from data.constants import TILE_LAND
+        map_data = self._project.map_data
+        mask = map_data.tile_map == TILE_LAND
+        if not bool(mask.any()):
+            QMessageBox.information(
+                self, tr("refine_dlg_title"), tr("refine_whole_no_land"))
+            return
+        self._run_refine_dialog(mask)
+
+    def _run_refine_dialog(self, mask) -> None:
+        """打开精修参数对话框并执行 (局部套索 / 全图共用)。"""
+        import numpy as np
+        from features.map.height.refine_dialog import RefineDialog
+        from commands.map.refine_height_region import RefineHeightRegionCommand
+
+        map_data = self._project.map_data
         # 备份原图供对话框预览使用
         original = map_data.height_map.copy()
 
@@ -1193,6 +1219,8 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         if accepted:
             cmd = RefineHeightRegionCommand(map_data, mask, dlg.params)
             self._cmd_history.execute(cmd)
+            from features.map.preview import renderer as preview_renderer
+            preview_renderer.invalidate_cache(self._canvas)
             self._canvas.height_map = map_data.height_map
             self._canvas._full_render()
             self._project.mark_dirty()
@@ -1200,8 +1228,6 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         else:
             self._canvas._full_render()
             self._status_info.setText(tr("status_ready"))
-
-        self._tool_panel._height_page.reset_refine_button()
 
     # ═══════════════════════ Continent ═══════════════════════
 
