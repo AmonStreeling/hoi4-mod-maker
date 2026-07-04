@@ -17,7 +17,7 @@ $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $REPO_ROOT = Split-Path -Parent $SCRIPT_DIR
 $DIST_DIR = Join-Path $REPO_ROOT "dist\HOI4MapMaker"
 $VERSION_PY = Join-Path $REPO_ROOT "version.py"
-$SUP_VER = "1.18.*"
+$SUP_VER = "1.19.*"
 
 # 从 version.py 读 VERSION
 $verLine = Get-Content $VERSION_PY | Where-Object { $_ -match '^VERSION\s*=' } | Select-Object -First 1

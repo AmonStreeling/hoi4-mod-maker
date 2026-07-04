@@ -25,11 +25,13 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=[
-        ('resources', 'resources'),
         ('data/atlas_tiles', 'data/atlas_tiles'),
         ('ui/i18n', 'ui/i18n'),
         # qdarktheme 内部 .qss 模板/.svg 图标资源, 不显式列出运行时找不到
         *collect_data_files('qdarktheme'),
+        # resources/ (图标等) 是未入库的本地目录, 丢失时不挡打包 —
+        # 程序运行时不读它, 只影响 exe 图标 (icon= 行自带存在性判断)
+        *([('resources', 'resources')] if os.path.exists('resources') else []),
     ],
     hiddenimports=[
         # features 是动态加载的, PyInstaller 抓不到, 显式列出
@@ -88,6 +90,9 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
+        # 本项目只用 PyQt5 — 环境里混进其他 Qt 绑定会让 PyInstaller 拒绝打包
+        # (2026-07-04: 3.10 环境被某依赖捎带装了 PySide6, 必须显式排除)
+        'PySide6', 'PySide2', 'PyQt6', 'qt_material',
         'pytest', 'pytest_qt', 'tests',
         'torch', 'torchvision', 'torchaudio',
         'paddle', 'paddlepaddle',
