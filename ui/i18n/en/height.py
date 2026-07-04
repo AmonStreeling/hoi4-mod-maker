@@ -11,6 +11,8 @@ STRINGS: dict[str, str] = {
     "height_btn_refine_tip": "Draw a loop around an area; enhance your painted heights with ridges/erosion/noise",
     "height_refine_hint": "When enabled, drag a loop; on release a parameters dialog opens. Keeps your shape, only adds detail.",
     "refine_dlg_title": "Refine Height Locally",
+    "refine_dlg_regen": "Regenerate this region's relief from scratch",
+    "refine_dlg_regen_tooltip": "Ignores the refine options below and completely redoes the height inside the selected region: chained mountain ranges, flat plains, continental shelf near coasts, with edges blending smoothly into the surrounding relief. Not a single pixel outside the selection is touched. Change the seed for a different layout.",
     "refine_dlg_strength": "Refine Strength",
     "refine_dlg_ridge": "Add Ridges (Sharpen peaks)",
     "refine_dlg_erosion": "Add Erosion (Carve valleys)",

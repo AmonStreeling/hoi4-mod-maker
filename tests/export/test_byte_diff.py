@@ -5,6 +5,12 @@ Phase 2 字节 diff 测试 — 保证拆 mod_exporter 前后输出完全一致.
 1. 首次运行: 用小测试工程导出 MOD, 记录所有文件的 sha256 到 baseline.json
 2. 后续运行: 再次导出, 比对所有文件哈希, 任一不匹配则测试失败
 3. 重构 mod_exporter 时, 这个测试是安全网
+
+⚠ 已知假失败源: 导出内容里有一部分是从游戏本体抄写清洗的 vanilla 文件
+(如 common/decisions/categories/*)。**Steam 更新游戏后这些文件会变**,
+byte-diff 会在没有任何代码改动的情况下失败。确认失败文件都是 vanilla
+派生内容且游戏目录 mtime 晚于基线时间, 则删除 baseline.json 重建即可
+(2026-06-12 和 2026-07-04 各发生过一次, 排查记录见项目记忆)。
 """
 
 import hashlib

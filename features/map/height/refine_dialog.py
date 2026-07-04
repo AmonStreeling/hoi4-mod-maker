@@ -62,6 +62,14 @@ class RefineDialog(QDialog):
         lay.setContentsMargins(14, 14, 14, 14)
         lay.setSpacing(10)
 
+        # 从零重新生成 (山链/平原/大陆架) — 勾上时下方精修控件全部禁用
+        self._cb_regen = QCheckBox(tr("refine_dlg_regen"))
+        self._cb_regen.setChecked(False)
+        self._cb_regen.setToolTip(tr("refine_dlg_regen_tooltip"))
+        self._cb_regen.toggled.connect(self._on_regen_toggled)
+        self._cb_regen.toggled.connect(self._on_param_changed)
+        lay.addWidget(self._cb_regen)
+
         # 强度滑块
         srow = QHBoxLayout()
         sl = QLabel(tr("refine_dlg_strength"))
@@ -188,6 +196,12 @@ class RefineDialog(QDialog):
         for lbl in self._shrink_labels:
             lbl.setVisible(on)
 
+    def _on_regen_toggled(self, on: bool) -> None:
+        """重新生成模式下, 精修控件不适用 → 全部禁用防误解。"""
+        for wdg in (self._strength_slider, self._cb_ridge, self._cb_erosion,
+                    self._cb_noise, self._cb_shrink, self._shrink_slider):
+            wdg.setEnabled(not on)
+
     def _refresh_preview(self) -> None:
         self._new_height = refine_heightmap_region(
             height_map=self._original,
@@ -200,6 +214,7 @@ class RefineDialog(QDialog):
             enable_shrink=self._cb_shrink.isChecked(),
             shrink_distance=float(self._shrink_slider.value()),
             seed=int(self._seed_spin.value()),
+            regenerate=self._cb_regen.isChecked(),
         )
         self.preview_updated.emit(self._new_height)
 
@@ -215,6 +230,7 @@ class RefineDialog(QDialog):
             enable_shrink=self._cb_shrink.isChecked(),
             shrink_distance=float(self._shrink_slider.value()),
             seed=int(self._seed_spin.value()),
+            regenerate=self._cb_regen.isChecked(),
         )
 
     def reject(self) -> None:  # type: ignore[override]

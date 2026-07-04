@@ -22,6 +22,8 @@ class RefineParams:
     enable_shrink: bool = False
     shrink_distance: float = 25.0
     seed: int = 42
+    # True = 选区内从零重新生成真实感地势 (忽略上面的精修开关)
+    regenerate: bool = False
 
 
 class RefineHeightRegionCommand(Command):
@@ -55,6 +57,7 @@ class RefineHeightRegionCommand(Command):
             enable_shrink=self._params.enable_shrink,
             shrink_distance=self._params.shrink_distance,
             seed=self._params.seed,
+            regenerate=self._params.regenerate,
         )
         # 把 mask 内新值写回（mask 外已和原图相同）
         hm[self._mask] = new_hm[self._mask]

@@ -11,6 +11,8 @@ STRINGS: dict[str, str] = {
     "height_btn_refine_tip": "画一个圈框住想精修的区域，在你画的高度基础上加山脊/侵蚀/噪声",
     "height_refine_hint": "开启后拖拽画一个圈，松手后弹出参数对话框。保留你画的形状，只加装饰。",
     "refine_dlg_title": "局部精修高度",
+    "refine_dlg_regen": "从零重新生成此区域的地势",
+    "refine_dlg_regen_tooltip": "忽略下方精修选项，把框选区域的高度完全重做：山脉成链、平原平整、近海有大陆架，边缘自动与周围地势平滑衔接。框选之外一个像素都不会动。换种子可重新洗一版。",
     "refine_dlg_strength": "精修强度",
     "refine_dlg_ridge": "加山脊（让山更尖）",
     "refine_dlg_erosion": "加侵蚀（加沟壑）",

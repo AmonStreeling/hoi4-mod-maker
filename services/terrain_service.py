@@ -406,6 +406,50 @@ def apply_mountain_ridge(
     return np.clip(result, 0, 255).astype(np.uint8)
 
 
+def _regenerate_heightmap_region(
+    height_map: np.ndarray,
+    mask: np.ndarray,
+    tile_map: np.ndarray,
+    seed: int,
+) -> np.ndarray:
+    """选区内从零重新生成真实感地势, 边缘羽化衔接原图。
+
+    只在 mask bbox (+64px padding) 的裁片上跑生成器, 小选区秒级完成;
+    混合权重在选区边界处为 0、向内平滑升到 1 — 边界连续无悬崖。
+    非 mask 像素严格等于原图 (与 refine_heightmap_region 契约一致)。
+    """
+    from scipy.ndimage import gaussian_filter
+    from domain.generators.heightmap import (
+        generate_realistic_heightmap, HeightmapParams)
+
+    ys, xs = np.where(mask)
+    if ys.size == 0:
+        return height_map.copy()
+    h, w = height_map.shape
+    pad = 64
+    y0, y1 = max(int(ys.min()) - pad, 0), min(int(ys.max()) + pad + 1, h)
+    x0, x1 = max(int(xs.min()) - pad, 0), min(int(xs.max()) + pad + 1, w)
+
+    sub_tile = tile_map[y0:y1, x0:x1]
+    sub_mask = mask[y0:y1, x0:x1]
+    sub_old = height_map[y0:y1, x0:x1].astype(np.float32)
+
+    fresh = generate_realistic_heightmap(
+        sub_tile, HeightmapParams(seed=seed)).astype(np.float32)
+
+    # 混合权重: 选区边界 0 → 向内 8px 后升到 1 (gaussian(mask) 在边界≈0.5)
+    weight = gaussian_filter(sub_mask.astype(np.float32), 8.0)
+    weight = np.where(sub_mask, np.clip((weight - 0.5) * 2.0, 0.0, 1.0), 0.0)
+
+    blended = sub_old * (1.0 - weight) + fresh * weight
+
+    result = height_map.copy()
+    sub_result = result[y0:y1, x0:x1]
+    sub_result[sub_mask] = np.clip(
+        blended[sub_mask], 0, 255).astype(np.uint8)
+    return result
+
+
 def _draw_line(mask: np.ndarray, y0: int, x0: int, y1: int, x1: int, width: int) -> None:
     """Bresenham 直线 + 宽度扩展。"""
     h, w = mask.shape
@@ -690,6 +734,7 @@ def refine_heightmap_region(
     enable_shrink: bool = False,
     shrink_distance: float = 25.0,
     seed: int = 42,
+    regenerate: bool = False,
 ) -> np.ndarray:
     """局部精修高度图。
 
@@ -710,11 +755,16 @@ def refine_heightmap_region(
         enable_shrink: 收缩山脉形状（把画大了的山脉边缘拉低）
         shrink_distance: 收缩影响距离（像素），越大收缩越狠
         seed: 随机种子
+        regenerate: True = 忽略精修开关, 选区内从零重新生成真实感地势
+                    (山链/平原/大陆架), 边缘羽化衔接原图
 
     返回:
         (H, W) uint8 新高度图。非 mask 区域 === 输入原图。
     """
     from scipy.ndimage import distance_transform_edt, gaussian_filter, maximum_filter
+
+    if regenerate:
+        return _regenerate_heightmap_region(height_map, mask, tile_map, seed)
 
     result = height_map.copy()
     if strength <= 0 or not (
