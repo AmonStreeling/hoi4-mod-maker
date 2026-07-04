@@ -26,16 +26,18 @@ from scipy.ndimage import distance_transform_edt, gaussian_filter, zoom
 from data.constants import TILE_LAND, SEA_LEVEL, OCEAN_HEIGHT
 from domain.generators.base import GeneratorParams
 
-# 陆地的安全底线 (海岸凹陷防线) 和最高峰
-LAND_FLOOR = SEA_LEVEL + 15
+# ── 海拔标定 (依据 tools/vanilla_terrain_stats.py 2026-07-04 实测) ──
+# 原版远比直觉"平": 平原中位数 +4, 丘陵 +20, 山地 +32 (P75=48)。
+# 游戏引擎渲染时自带垂直夸张 — 高度图做得太高进游戏会变尖刺地狱。
+LAND_FLOOR = SEA_LEVEL + 6        # 原版平原低至 +1~4, 留最小安全余量
 SEA_CEILING = SEA_LEVEL - 2
 
 
 @dataclass(frozen=True)
 class HeightmapParams(GeneratorParams):
-    """真实感高度图参数。"""
+    """真实感高度图参数 (默认值按原版海拔分布标定)。"""
     mountain_coverage: float = 0.28   # 陆地中山区占比 (0~1)
-    peak_height: int = 235            # 最高峰灰度 (上限 255)
+    peak_height: int = 165            # 最高峰灰度 (原版山地 P75≈143, 峰再高一档)
     shelf_width: float = 60.0         # 大陆架宽度 (像素)
 
 
@@ -83,9 +85,9 @@ def generate_realistic_heightmap(
     d_sea = distance_transform_edt(~land).astype(np.float32)
 
     elev = np.empty((h, w), dtype=np.float32)
-    # 陆地基面: 海岸处 LAND_FLOOR, 向内陆极缓爬升 (封顶 +8 —
-    # 坡度太陡会在 uint8 量化后变成肉眼可见的"梯田"等高线)
-    elev[:] = LAND_FLOOR + np.minimum(np.sqrt(d_land) * 0.45, 8.0)
+    # 陆地基面: 海岸处 LAND_FLOOR, 向内陆极缓爬升 (封顶 +5 —
+    # 原版平原 P50 仅 +4; 坡度太陡还会量化成"梯田"等高线)
+    elev[:] = LAND_FLOOR + np.minimum(np.sqrt(d_land) * 0.35, 5.0)
     # 海底: 大陆架内缓坡, 之外落到深海
     shelf_t = np.clip(d_sea / max(params.shelf_width, 1.0), 0.0, 1.0)
     sea_depth = SEA_CEILING - 4.0 - shelf_t * (SEA_CEILING - 4.0 - OCEAN_HEIGHT)
@@ -112,21 +114,21 @@ def generate_realistic_heightmap(
     # 地形细化按海拔分类时, 岩石只描在脊上, 山链形状才出得来
     ridged = np.clip(ridged, 0.0, 1.0) ** 3.5
 
-    peak_range = float(params.peak_height) - (LAND_FLOOR + 18.0)
+    peak_range = float(params.peak_height) - (LAND_FLOOR + 11.0)
     mountains = ridged * belt_w * max(peak_range, 0.0)
 
-    # ── 4. 丘陵带: 山区边缘的中频过渡 ──
+    # ── 4. 丘陵带: 山区边缘的中频过渡 (原版丘陵 P50≈+20) ──
     hill_w = np.clip(belt_w * 2.0, 0.0, 1.0) - belt_w   # 山带边缘权重
     hills = (_fbm(rng, (h, w), ((20.0, 1.0), (10.0, 0.5))) * 0.5 + 0.5) \
-        * hill_w * 28.0
+        * hill_w * 16.0
 
     # ── 5. 平原微起伏 + 坡面侵蚀纹 ──
-    plains = _fbm(rng, (h, w), ((30.0, 1.0), (9.0, 0.4))) * 2.0
+    plains = _fbm(rng, (h, w), ((30.0, 1.0), (9.0, 0.4))) * 2.5
     elev_land = elev + mountains + hills + plains
 
     gy, gx = np.gradient(elev_land)
     slope = np.sqrt(gx * gx + gy * gy)
-    erosion = _fbm(rng, (h, w), ((4.0, 1.0),)) * np.clip(slope * 1.5, 0.0, 6.0)
+    erosion = _fbm(rng, (h, w), ((4.0, 1.0),)) * np.clip(slope * 1.5, 0.0, 4.0)
     elev_land += erosion
 
     elev[land] = elev_land[land]

@@ -21,14 +21,20 @@ def i18n():
 
 
 def test_all_languages_load(i18n):
-    """所有语言目录都能加载且 key 数量一致."""
+    """所有语言目录都能加载; 中文为源头, 英/俄不得有中文没有的孤儿键.
+
+    2026-07-04 用户决定: 开发期只写中文文案, 英/俄在发版前用
+    i18n_audit 清单统一补翻 — 所以不再强制三语言键数量相等,
+    只保证 en/ru ⊆ zh (孤儿键说明有键改名/删除没同步, 仍是 bug)。
+    """
     langs = i18n.available_languages()
     assert "zh" in langs
     assert "en" in langs
     assert "ru" in langs
-    counts = {l: len(i18n._languages[l]) for l in langs}
-    # zh/en/ru 应该 100% 同步
-    assert counts["zh"] == counts["en"] == counts["ru"], counts
+    zh_keys = set(i18n._languages["zh"])
+    for lang in ("en", "ru"):
+        orphans = set(i18n._languages[lang]) - zh_keys
+        assert not orphans, f"{lang} 有中文没有的孤儿键: {sorted(orphans)[:5]}"
 
 
 def test_placeholder_consistency_zh_en_ru(i18n):

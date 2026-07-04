@@ -83,6 +83,7 @@ class TerrainPage(QWidget):
     terrain_soft_edge_changed = pyqtSignal(bool)
     auto_terrain_requested = pyqtSignal()
     detail_terrain_requested = pyqtSignal(int)   # 按气候细化, 参数=种子
+    beautify_terrain_requested = pyqtSignal(int) # 保形美化, 参数=种子
     downgrade_mountain_requested = pyqtSignal()
     downgrade_lasso_mode_toggled = pyqtSignal(bool)
 
@@ -121,6 +122,13 @@ class TerrainPage(QWidget):
         detail_btn.clicked.connect(
             lambda: self.detail_terrain_requested.emit(self._seed_spin.value()))
         gl.addWidget(detail_btn)
+
+        beautify_btn = QPushButton(tr("terrain_btn_beautify"))
+        beautify_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
+        beautify_btn.setToolTip(tr("terrain_btn_beautify_tooltip"))
+        beautify_btn.clicked.connect(
+            lambda: self.beautify_terrain_requested.emit(self._seed_spin.value()))
+        gl.addWidget(beautify_btn)
 
         # 种子
         seed_row = QHBoxLayout()

@@ -808,6 +808,41 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         self._canvas.terrain_map = map_data.terrain_map
         self._status_info.setText(tr("status_detail_terrain_done"))
 
+    def _on_beautify_terrain(self, seed: int) -> None:
+        """保形美化地形: 作者画的布局不变, 按原版实测参数上细节。"""
+        from domain.generators.terrain_beautify import (
+            TerrainBeautifyGenerator, TerrainBeautifyParams)
+        from commands.map.generate_terrain import GenerateTerrainCommand
+        ret = QMessageBox.question(
+            self, tr("beautify_terrain_confirm_title"),
+            tr("beautify_terrain_confirm_msg"),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if ret != QMessageBox.Yes:
+            return
+        self._status_info.setText(tr("status_beautify_terrain"))
+        self.repaint()
+        from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtCore import Qt
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            map_data = self._project.map_data
+            gen = TerrainBeautifyGenerator()
+            new_terrain = gen.generate(map_data, TerrainBeautifyParams(seed=seed))
+            cmd = GenerateTerrainCommand(map_data, new_terrain)
+            cmd.label = tr("beautify_terrain_confirm_title")
+            self._cmd_history.execute(cmd)
+        finally:
+            QApplication.restoreOverrideCursor()
+        self._project.mark_dirty()
+        self._project.mark_assets_dirty(
+            "map/terrain/colormap_rgb_cityemissivemask_a.dds",
+        )
+        from features.map.preview import renderer as preview_renderer
+        preview_renderer.invalidate_cache(self._canvas)
+        self._canvas.terrain_map = map_data.terrain_map
+        self._status_info.setText(tr("status_beautify_terrain_done"))
+
     def _on_downgrade_mountain(self, mask=None) -> None:
         """降级山脉 (全图或选区)。mask=None 时全图, 否则只在 mask 内。"""
         from commands.map.downgrade_mountain import DowngradeMountainCommand

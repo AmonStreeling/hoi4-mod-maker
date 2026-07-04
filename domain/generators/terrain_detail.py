@@ -37,15 +37,26 @@ IDX_JUNGLE, IDX_JUNGLE_VAR, IDX_JUNGLE_MOUNTAIN = 21, 22, 27
 IDX_LAKES, IDX_OCEAN = 14, 15
 
 # 海拔阈值 (高度图灰度, 相对海平面)
-HILL_START = 45.0
-MOUNTAIN_START = 85.0
-SNOW_PEAK_START = 125.0
+# 按 tools/vanilla_terrain_stats.py 2026-07-04 实测标定:
+# 原版丘陵 P25=12/P50=20, 山地 P25=20/P50=32/P75=48 — 远比直觉平缓
+HILL_START = 14.0
+MOUNTAIN_START = 26.0
+SNOW_PEAK_START = 60.0
 
 # 纬度带边界 (度)
 JUNGLE_END = 16.0
 DESERT_START, DESERT_END = 20.0, 38.0
 TEMPERATE_END = 62.0
 COLD_END = 74.0
+
+
+def _quantile_thresholds(noise: np.ndarray, fracs: list[float]) -> list[float]:
+    """把噪声场切成指定面积占比的阈值列表 (fracs 为累计占比, 升序)。
+
+    用分位数而不是拍脑袋的固定阈值 — 变体混合比例可以精确对齐
+    原版实测值 (如森林 67:33)。
+    """
+    return [float(np.quantile(noise, f)) for f in fracs]
 
 
 def generate_detailed_terrain(
@@ -64,12 +75,21 @@ def generate_detailed_terrain(
     lat = latitude_field(h, w, equator_y, seed)
     hf = height_map.astype(np.float32) - float(SEA_LEVEL)
 
-    # 噪声场: 森林斑块 (中频) / 变体混排 (低频) / 沼泽点缀 (中频)
-    forest_noise = gaussian_filter(
+    # 噪声场: 森林斑块 (中频) / 变体混排 (低频+细粒) / 沼泽点缀 (中频)
+    # 变体噪声掺 30% 细粒成分: 原版斑块边界密度实测 0.252 (每 4 个陆地
+    # 像素 1 个在边界上), 纯低频噪声的边界过于光滑稀疏
+    forest_blob = gaussian_filter(
         rng.standard_normal((h, w)).astype(np.float32), 14.0)
-    forest_noise /= max(float(np.abs(forest_noise).max()), 1e-6)
-    variant_noise = gaussian_filter(
+    forest_blob /= max(float(np.abs(forest_blob).max()), 1e-6)
+    variant_fine = gaussian_filter(
+        rng.standard_normal((h, w)).astype(np.float32), 1.8)
+    variant_fine /= max(float(np.abs(variant_fine).max()), 1e-6)
+    # 森林斑块边缘掺细粒 — 原版森林/平原交界是犬牙状的碎边
+    forest_noise = forest_blob * 0.78 + variant_fine * 0.22
+    variant_low = gaussian_filter(
         rng.standard_normal((h, w)).astype(np.float32), 55.0)
+    variant_low /= max(float(np.abs(variant_low).max()), 1e-6)
+    variant_noise = variant_low * 0.40 + variant_fine * 0.60
     marsh_noise = gaussian_filter(
         rng.standard_normal((h, w)).astype(np.float32), 9.0)
     marsh_noise /= max(float(np.abs(marsh_noise).max()), 1e-6)
@@ -77,21 +97,28 @@ def generate_detailed_terrain(
     out = np.full((h, w), IDX_OCEAN, dtype=np.uint8)
     land = tile_map == TILE_LAND
 
+    # 变体混合的面积占比按原版实测 (tools/vanilla_terrain_stats.py):
+    # 平原 91:7, 森林 67:33, 丛林 87:13, 沙漠 44:32:14:10
+    q_plains, = _quantile_thresholds(variant_noise, [0.91])
+    q_jungle, = _quantile_thresholds(variant_noise, [0.87])
+    q_d1, q_d2, q_d3 = _quantile_thresholds(variant_noise, [0.44, 0.76, 0.90])
+
     # ── 1. 纬度基调 ──
     # 原则: 任何气候带都是"基调 + 斑块", 不能整带一刀切糊成色块
     base = np.full((h, w), IDX_PLAINS, dtype=np.uint8)
-    base[variant_noise > 0] = IDX_PLAINS_VAR
+    base[variant_noise > q_plains] = IDX_PLAINS_VAR
 
     jungle_band = lat < JUNGLE_END
     jungle = jungle_band & (forest_noise > -0.12)        # ~6 成丛林斑块, 余下平原
     base[jungle] = IDX_JUNGLE
-    base[jungle & (variant_noise > 0.2)] = IDX_JUNGLE_VAR
+    base[jungle & (variant_noise > q_jungle)] = IDX_JUNGLE_VAR
 
     desert_band = (lat >= DESERT_START) & (lat < DESERT_END)
-    desert = desert_band & (variant_noise > -0.35)       # 带边缘留干草原过渡
+    desert = desert_band & (variant_low > -0.35)         # 带边缘留干草原过渡
     base[desert] = IDX_DESERT
-    base[desert & (variant_noise > 0.3)] = IDX_DESERT_VAR
-    base[desert & (forest_noise < -0.45)] = IDX_DESERT_ROCK
+    base[desert & (variant_noise > q_d1)] = IDX_DESERT_VAR
+    base[desert & (variant_noise > q_d2)] = IDX_DESERT_HILLS
+    base[desert & (variant_noise > q_d3)] = IDX_DESERT_ROCK
 
     snow = lat >= COLD_END
     base[snow] = IDX_PLAINS_SNOW
@@ -102,8 +129,9 @@ def generate_detailed_terrain(
     forest_density[(lat >= DESERT_END) & (lat < TEMPERATE_END)] = 0.30
     forest_density[(lat >= TEMPERATE_END) & (lat < COLD_END)] = 0.22
     forest = (forest_noise > (0.62 - forest_density)) & (forest_density > 0)
+    q_forest, = _quantile_thresholds(variant_noise, [0.67])   # 原版 67:33
     base[forest] = IDX_FOREST
-    base[forest & (variant_noise > 0.25)] = IDX_FOREST_VAR
+    base[forest & (variant_noise > q_forest)] = IDX_FOREST_VAR
 
     # ── 3. 沼泽点缀: 温带低洼平地 ──
     marsh = (
@@ -120,10 +148,12 @@ def generate_detailed_terrain(
     base[hills & desert] = IDX_DESERT_HILLS
     base[hills & (lat >= DESERT_END) & (variant_noise > 0.45)] = IDX_HILLS
 
+    # 山地变体按原版实测 42:34:22 (idx11:idx20:idx10)
+    q_m1, q_m2 = _quantile_thresholds(variant_noise, [0.42, 0.76])
     mountains = hf >= MOUNTAIN_START
     base[mountains] = IDX_MOUNTAIN
-    base[mountains & (variant_noise > 0.3)] = IDX_MOUNTAIN_VAR
-    base[mountains & (variant_noise < -0.4)] = IDX_MOUNTAIN_GRASS
+    base[mountains & (variant_noise > q_m1)] = IDX_MOUNTAIN_GRASS
+    base[mountains & (variant_noise > q_m2)] = IDX_MOUNTAIN_VAR
     base[mountains & desert] = IDX_DESERT_MOUNTAIN
     base[mountains & jungle] = IDX_JUNGLE_MOUNTAIN
 

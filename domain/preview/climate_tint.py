@@ -28,14 +28,38 @@ _LAT_G = np.array([132, 134, 132, 138, 130, 124, 126, 152, 168], dtype=np.float3
 _LAT_B = np.array([ 96, 100,  98, 100, 104, 108, 122, 155, 175], dtype=np.float32)
 
 # 海拔修正: 高于此高度开始向岩灰过渡, 到雪线变白
-_ROCK_START = SEA_LEVEL + 60.0
-_SNOW_LINE = SEA_LEVEL + 120.0
+# (按原版实测标定: 山地 P50=+32, 见 tools/vanilla_terrain_stats.py)
+_ROCK_START = SEA_LEVEL + 26.0
+_SNOW_LINE = SEA_LEVEL + 60.0
 _ROCK_RGB = np.array([130, 128, 126], dtype=np.float32)
 _SNOW_RGB = np.array([175, 178, 185], dtype=np.float32)
 
 # 低频噪声: 振幅 (色调单位) 和平滑半径 (像素)
 _NOISE_AMP = 9.0
 _NOISE_SIGMA = 48.0
+
+
+def latitude_field(
+    h: int,
+    w: int,
+    equator_y: float | None = None,
+    seed: int = 0,
+    amp: float = _NOISE_AMP,
+    sigma: float = _NOISE_SIGMA,
+) -> np.ndarray:
+    """每像素"纬度" (H, W) float32, 0~90, 带低频噪声蜿蜒。
+
+    地形细化和气候色调共用这张场, 保证森林带和色调带对得上。
+    """
+    eq = h / 2.0 if equator_y is None else float(equator_y)
+    ys = np.arange(h, dtype=np.float32)
+    lat = np.abs(ys - eq) / max(eq, h - eq) * 90.0          # (H,)
+
+    rng = np.random.default_rng(seed)
+    wobble = gaussian_filter(
+        rng.standard_normal((h, w)).astype(np.float32), sigma)
+    wobble *= amp / max(float(np.abs(wobble).max()), 1e-6)
+    return np.clip(lat[:, None] + wobble, 0.0, 90.0)
 
 
 def generate_climate_tint(
@@ -53,19 +77,9 @@ def generate_climate_tint(
         seed: 噪声种子, 同一种子结果可复现
     """
     h, w = tile_map.shape
-    eq = h / 2.0 if equator_y is None else float(equator_y)
 
     # ── 1. 纬度气候带 ──
-    # 每行的"纬度": 距赤道行的比例 × 90°
-    ys = np.arange(h, dtype=np.float32)
-    lat = np.abs(ys - eq) / max(eq, h - eq) * 90.0          # (H,)
-
-    # 低频噪声让气候带边界蜿蜒 (对纬度本身扰动, 而不是对颜色扰动)
-    rng = np.random.default_rng(seed)
-    wobble = gaussian_filter(
-        rng.standard_normal((h, w)).astype(np.float32), _NOISE_SIGMA)
-    wobble *= _NOISE_AMP / max(float(np.abs(wobble).max()), 1e-6)
-    lat2d = np.clip(lat[:, None] + wobble, 0.0, 90.0)       # (H, W)
+    lat2d = latitude_field(h, w, equator_y, seed)           # (H, W)
 
     tint = np.empty((h, w, 3), dtype=np.float32)
     tint[:, :, 0] = np.interp(lat2d, _LAT_KEYS, _LAT_R)

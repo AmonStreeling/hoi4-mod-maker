@@ -40,13 +40,17 @@ def test_continental_shelf():
 
 
 def test_mountains_and_plains_coexist():
-    """有山 (高值) 也有大面积低平原, 不是均匀鼓包。"""
+    """有山 (高值) 也有大面积低平原, 不是均匀鼓包。
+
+    海拔区间按原版实测标定 (山地 P50=+32, 峰值上限默认 165) —
+    原版远比直觉"平", 游戏引擎渲染时自带垂直夸张。
+    """
     tile_map = _world()
     out = generate_realistic_heightmap(
         tile_map, HeightmapParams(seed=3, mountain_coverage=0.3))
     land_vals = out[tile_map == TILE_LAND].astype(np.int32)
-    assert land_vals.max() > 180                       # 存在山地
-    plains_ratio = (land_vals < LAND_FLOOR + 15).mean()
+    assert land_vals.max() > 140                       # 存在山峰 (>海平面+45)
+    plains_ratio = (land_vals < LAND_FLOOR + 10).mean()
     assert plains_ratio > 0.35                         # 大片平原
 
 
