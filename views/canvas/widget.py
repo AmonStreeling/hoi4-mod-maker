@@ -59,6 +59,10 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
     split_line_drawn = pyqtSignal(int, list)  # 切割线完成, (pid, [(y,x), ...])
     province_gaps_detected = pyqtSignal(list)  # 省份 ID 空洞, [gap_id, ...]
 
+    # 调整参考图模式
+    ref_adjust_exited = pyqtSignal()                    # ESC 退出（页面按钮同步取消勾选）
+    ref_adjust_scale_changed = pyqtSignal(str, float)   # 滚轮缩放 (target, scale)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -193,6 +197,9 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
             RefImageMixin.REF_CUSTOM: RefLayer(self._ref_pixmap_item),
         }
 
+        # 调整参考图模式: None=关闭, "custom"/"vanilla"=正在调整哪张
+        self._ref_adjust_target: str | None = None
+
         self._province_pixmap_item = QGraphicsPixmapItem()
         self._province_pixmap_item.setOpacity(0.6)
         self._province_pixmap_item.setZValue(2)
@@ -205,6 +212,14 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._selection_rect_item.setZValue(100)
         self._selection_rect_item.setVisible(False)
         self._scene.addItem(self._selection_rect_item)
+
+        # 调整参考图模式的橙色虚线框（标出正在被拖拽的参考图）
+        self._ref_adjust_border = QGraphicsRectItem()
+        self._ref_adjust_border.setPen(QPen(QColor(249, 115, 22), 2, Qt.DashLine))
+        self._ref_adjust_border.setBrush(QBrush(Qt.NoBrush))
+        self._ref_adjust_border.setZValue(103)
+        self._ref_adjust_border.setVisible(False)
+        self._scene.addItem(self._ref_adjust_border)
 
         # 切割预览线
         from PyQt5.QtWidgets import QGraphicsPathItem

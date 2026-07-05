@@ -54,6 +54,19 @@ class InputMixin:
             event.accept()
             return
 
+        # 调整参考图模式: 左键 = 拖动参考图, 其余绘制交互全部拦截
+        if (self._ref_adjust_target is not None
+                and event.button() == Qt.MouseButton.LeftButton):
+            if self._space_pressed:
+                self._is_panning = True
+                self._pan_start = event.pos()
+                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            else:
+                self._ref_dragging = True
+                self._ref_drag_start = event.pos()
+            event.accept()
+            return
+
         # 框选模式拦截
         if self._selection_mode and event.button() == Qt.MouseButton.LeftButton:
             sx, sy = self._scene_pos(event)
@@ -371,14 +384,15 @@ class InputMixin:
             event.accept()
             return
 
-        # Ctrl+拖拽：移动参考图
+        # 拖拽移动参考图 (Ctrl+拖拽 = 自定义图; 调整模式 = 当前调整对象)
         if getattr(self, '_ref_dragging', False):
             delta = event.pos() - self._ref_drag_start
             self._ref_drag_start = event.pos()
             # 屏幕像素转场景像素（考虑缩放）
             scene_dx = delta.x() / self._zoom
             scene_dy = delta.y() / self._zoom
-            self.move_ref_image(scene_dx, scene_dy)
+            target = self._ref_adjust_target or self.REF_CUSTOM
+            self.move_ref_layer(target, scene_dx, scene_dy)
             event.accept()
             return
 
@@ -501,7 +515,9 @@ class InputMixin:
         # 结束参考图拖拽
         if getattr(self, '_ref_dragging', False):
             self._ref_dragging = False
-            self.setCursor(Qt.CursorShape.CrossCursor)
+            self.setCursor(Qt.CursorShape.SizeAllCursor
+                           if self._ref_adjust_target is not None
+                           else Qt.CursorShape.CrossCursor)
             event.accept()
             return
 
@@ -634,6 +650,16 @@ class InputMixin:
         super().contextMenuEvent(event)
 
     def wheelEvent(self, event: QWheelEvent) -> None:
+        # 调整参考图模式: 滚轮 = 缩放被调整的参考图
+        if self._ref_adjust_target is not None:
+            delta = event.angleDelta().y()
+            step = 0.1 if delta > 0 else -0.1
+            target = self._ref_adjust_target
+            self.set_ref_layer_scale(target, self._ref_layers[target].scale + step)
+            self.ref_adjust_scale_changed.emit(target, self._ref_layers[target].scale)
+            event.accept()
+            return
+
         # Ctrl+滚轮：缩放参考图
         if event.modifiers() & Qt.ControlModifier:
             delta = event.angleDelta().y()
@@ -665,6 +691,11 @@ class InputMixin:
                 self._end_transform()
                 return
         elif event.key() == Qt.Key.Key_Escape:
+            # ESC 退出调整参考图模式
+            if self._ref_adjust_target is not None:
+                self.set_ref_adjust_mode(None)
+                self.ref_adjust_exited.emit()
+                return
             # ESC 取消变换
             if self._transform_active:
                 self._cancel_transform()

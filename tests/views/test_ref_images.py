@@ -87,3 +87,57 @@ def test_legacy_wrappers_route_to_layers(canvas, tmp_path):
     assert not canvas._ref_layers["custom"].item.isVisible()
     canvas.fit_ref_to_map()
     assert canvas._ref_layers["custom"].item.pixmap().width() == canvas.map_w
+
+
+from PyQt5.QtCore import Qt, QEvent, QPointF, QPoint
+from PyQt5.QtGui import QMouseEvent, QKeyEvent, QWheelEvent
+
+
+def _left_press(x=50.0, y=50.0) -> QMouseEvent:
+    return QMouseEvent(QEvent.MouseButtonPress, QPointF(x, y),
+                       Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+
+
+def test_adjust_mode_blocks_drawing(canvas, tmp_path):
+    canvas.load_ref_layer("custom", _make_png(tmp_path))
+    canvas.set_ref_adjust_mode("custom")
+    canvas.mousePressEvent(_left_press())
+    assert canvas._is_drawing is False          # 画笔没有启动
+    assert canvas._ref_dragging is True         # 变成拖参考图
+    assert canvas._ref_adjust_border.isVisible()
+
+
+def test_adjust_mode_off_restores_drawing(canvas, tmp_path):
+    canvas.load_ref_layer("custom", _make_png(tmp_path))
+    canvas.set_ref_adjust_mode("custom")
+    canvas.set_ref_adjust_mode(None)
+    assert not canvas._ref_adjust_border.isVisible()
+    canvas.mousePressEvent(_left_press())
+    assert canvas._is_drawing is True           # 画笔恢复
+
+
+def test_esc_exits_adjust_and_emits(canvas, tmp_path):
+    canvas.load_ref_layer("vanilla", _make_png(tmp_path))
+    canvas.set_ref_adjust_mode("vanilla")
+    fired = []
+    canvas.ref_adjust_exited.connect(lambda: fired.append(1))
+    esc = QKeyEvent(QEvent.KeyPress, Qt.Key_Escape, Qt.NoModifier)
+    canvas.keyPressEvent(esc)
+    assert canvas._ref_adjust_target is None
+    assert fired == [1]
+
+
+def test_wheel_scales_adjust_target(canvas, tmp_path):
+    canvas.load_ref_layer("vanilla", _make_png(tmp_path))
+    canvas.set_ref_adjust_mode("vanilla")
+    canvas.set_ref_layer_scale("vanilla", 1.0)
+    got = []
+    canvas.ref_adjust_scale_changed.connect(lambda t, s: got.append((t, s)))
+    ev = QWheelEvent(QPointF(50, 50), QPointF(50, 50), QPoint(0, 0),
+                     QPoint(0, 120), Qt.NoButton, Qt.NoModifier,
+                     Qt.NoScrollPhase, False)
+    canvas.wheelEvent(ev)
+    assert canvas._ref_layers["vanilla"].scale == pytest.approx(1.1)
+    assert got == [("vanilla", pytest.approx(1.1))]
+    # 自定义图不动
+    assert canvas._ref_layers["custom"].scale == 1.0

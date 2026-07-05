@@ -62,11 +62,15 @@ class RefImageMixin:
                 int(layer.original.height() * scale),
                 Qt.KeepAspectRatio, Qt.SmoothTransformation)
             layer.item.setPixmap(scaled)
+        if getattr(self, '_ref_adjust_target', None) == key:
+            self._update_ref_adjust_border()
 
     def move_ref_layer(self, key: str, dx: float, dy: float) -> None:
         item = self._ref_layers[key].item
         pos = item.pos()
         item.setPos(pos.x() + dx, pos.y() + dy)
+        if getattr(self, '_ref_adjust_target', None) == key:
+            self._update_ref_adjust_border()
 
     def fit_ref_layer(self, key: str) -> None:
         """拉伸铺满整张地图。"""
@@ -79,6 +83,8 @@ class RefImageMixin:
         layer.item.setPixmap(scaled)
         layer.item.setPos(0, 0)
         layer.scale = self.map_w / layer.original.width()
+        if getattr(self, '_ref_adjust_target', None) == key:
+            self._update_ref_adjust_border()
 
     def toggle_ref_layer(self, key: str, visible: bool) -> None:
         self._ref_layers[key].item.setVisible(visible)
@@ -116,3 +122,24 @@ class RefImageMixin:
     def toggle_ref_image(self, visible: bool) -> None:
         self._show_ref_image = visible
         self.toggle_ref_layer(self.REF_CUSTOM, visible)
+
+    # ── 调整参考图模式 ────────────────────────────────
+
+    def set_ref_adjust_mode(self, target: str | None) -> None:
+        """进入/退出调整参考图模式。target=None 退出并恢复绘制。"""
+        self._ref_adjust_target = target
+        if target is None:
+            self._ref_adjust_border.setVisible(False)
+            self.setCursor(Qt.CrossCursor if self._current_tool != "pan"
+                           else Qt.OpenHandCursor)
+        else:
+            self._update_ref_adjust_border()
+            self._ref_adjust_border.setVisible(True)
+            self.setCursor(Qt.SizeAllCursor)
+
+    def _update_ref_adjust_border(self) -> None:
+        """虚线框贴住当前被调整的参考图。"""
+        if self._ref_adjust_target is None:
+            return
+        item = self._ref_layers[self._ref_adjust_target].item
+        self._ref_adjust_border.setRect(item.sceneBoundingRect())
