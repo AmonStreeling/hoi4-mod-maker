@@ -169,14 +169,10 @@ class InputMixin:
                 event.accept()
                 return
 
-            # 高度/地形模式 + 套索（精修 or 选区降级）: 拖拽收集闭合多边形
-            # 两种模式共享同一套 drawing 代码, 只在 release 时走不同信号
+            # 地形模式 + 选区降级套索: 拖拽收集闭合多边形
+            # （历史上高度精修套索也用这套 drawing 代码, 该功能已删, 变量名保留）
             _active_lasso = None
-            if (self._display_mode == "height"
-                    and getattr(self, '_refine_lasso_mode', False)
-                    and getattr(self, '_height_brush_mode', 'off') == "off"):
-                _active_lasso = "refine"
-            elif (self._display_mode == "terrain"
+            if (self._display_mode == "terrain"
                     and getattr(self, '_downgrade_lasso_mode', False)):
                 _active_lasso = "downgrade"
             if _active_lasso is not None:
@@ -562,10 +558,9 @@ class InputMixin:
                     event.accept()
                     return
 
-                # 套索释放 → 闭合多边形 → 按 _active_lasso_kind 发对应信号
+                # 套索释放 → 闭合多边形 → 发选区降级信号
                 if getattr(self, '_refine_lasso_drawing', False):
                     self._refine_lasso_drawing = False
-                    kind = getattr(self, '_active_lasso_kind', 'refine')
                     path = getattr(self, '_refine_lasso_path', [])
                     # 闭合：把最后一点连回起点
                     if len(path) >= 3:
@@ -574,10 +569,7 @@ class InputMixin:
                         self._refine_lasso_item.setPath(current_path)
                     self._refine_lasso_item.setVisible(False)
                     if len(path) >= 3:
-                        if kind == "downgrade":
-                            self.downgrade_lasso_drawn.emit(path)
-                        else:
-                            self.refine_lasso_drawn.emit(path)
+                        self.downgrade_lasso_drawn.emit(path)
                     self._refine_lasso_path = []
                     self._active_lasso_kind = None
                     self.stroke_ended.emit()

@@ -54,7 +54,6 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
     stroke_started = pyqtSignal()     # 画笔操作开始
     stroke_ended = pyqtSignal()       # 画笔操作结束
     ridge_drawn = pyqtSignal(list)    # 山脉画线完成, [(y,x), ...]
-    refine_lasso_drawn = pyqtSignal(list)  # 局部精修套索完成, [(y,x), ...]
     downgrade_lasso_drawn = pyqtSignal(list)  # 选区降级套索完成, [(y,x), ...]
     split_line_drawn = pyqtSignal(int, list)  # 切割线完成, (pid, [(y,x), ...])
     province_gaps_detected = pyqtSignal(list)  # 省份 ID 空洞, [gap_id, ...]

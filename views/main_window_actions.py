@@ -1042,56 +1042,6 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         )
         self._status_info.setText(tr("status_height_smoothed"))
 
-    def _on_import_heightmap(self) -> None:
-        """导入高度图（覆盖整图）。可撤销 (Ctrl+Z)。"""
-        from PyQt5.QtWidgets import QFileDialog
-        from commands.land.brush_stroke import BrushStrokeCommand
-        path, _ = QFileDialog.getOpenFileName(
-            self, tr("height_import_btn"),
-            "", "Images (*.bmp *.png *.jpg *.tif);;All Files (*)"
-        )
-        if not path:
-            return
-        # 防呆: 二次确认 (覆盖整张高度图, 建议先保存项目)
-        ret = QMessageBox.question(
-            self, tr("import_heightmap_confirm_title"),
-            tr("import_heightmap_confirm_msg"),
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if ret != QMessageBox.Yes:
-            return
-        try:
-            from PIL import Image
-            import numpy as np
-            img = Image.open(path).convert("L")
-            map_data = self._project.map_data
-            h, w = map_data.height_map.shape
-            img = img.resize((w, h), Image.BILINEAR)
-            new_height = np.array(img, dtype=np.uint8)
-
-            # 撤销快照：操作前
-            snap_arrays = {"height_map": map_data.height_map}
-            before = BrushStrokeCommand.snapshot_arrays(snap_arrays)
-
-            map_data.height_map[:] = new_height
-            self._canvas.height_map = map_data.height_map
-
-            # 入栈
-            if BrushStrokeCommand.has_changes(before, snap_arrays):
-                after = BrushStrokeCommand.snapshot_arrays(snap_arrays)
-                cmd = BrushStrokeCommand("导入高度图", before, after)
-                cmd.set_target_arrays(self._app._get_all_arrays())
-                self._cmd_history._undo_stack.append(cmd)
-                self._cmd_history._redo_stack.clear()
-                self._cmd_history._notify()
-
-            self._canvas.refresh_display()
-            self._project.mark_dirty()
-            self._status_info.setText(tr("height_import_success"))
-        except Exception as e:
-            from PyQt5.QtWidgets import QMessageBox
-            QMessageBox.warning(self, tr("dlg_error"), tr("height_import_fail", str(e)))
-
     # ── 山脉画线 ──
 
     def _on_ridge_mode(self, enabled: bool) -> None:
@@ -1169,38 +1119,7 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         self._canvas._split_line_item.setVisible(False)
         self._status_info.setText(tr("status_ridge_mode_on"))
 
-    # ── 局部精修（套索选区） ──
-
-    def _on_refine_lasso_mode(self, enabled: bool) -> None:
-        """切换局部精修套索模式 — 同步到 canvas。"""
-        self._canvas._refine_lasso_mode = enabled
-        if enabled:
-            self._status_info.setText(tr("status_refine_mode"))
-        else:
-            self._canvas._refine_lasso_item.setVisible(False)
-
-    def _on_refine_lasso_drawn(self, points: list) -> None:
-        """canvas 套索完成 → mask → 弹参数对话框 → 执行 Command。"""
-        import numpy as np
-        from features.map.height.refine_dialog import RefineDialog
-        from commands.map.refine_height_region import RefineHeightRegionCommand
-        from PyQt5.QtWidgets import QMessageBox
-
-        # 把 [(y,x), ...] 转成闭合多边形 mask
-        map_data = self._project.map_data
-        h, w = map_data.height_map.shape
-        mask = _polygon_to_mask(points, h, w)
-
-        # 面积太小（<20x20 = 400）直接拒绝
-        if mask.sum() < 400:
-            QMessageBox.information(
-                self, tr("refine_dlg_title"), tr("refine_dlg_area_too_small")
-            )
-            self._tool_panel._height_page.reset_refine_button()
-            return
-
-        self._run_refine_dialog(mask)
-        self._tool_panel._height_page.reset_refine_button()
+    # ── 保形精修（整图） ──
 
     def _on_refine_whole_map(self) -> None:
         """保形精修整张高度图: 你画的布局(哪高哪低)不变, 全图叠加质感。

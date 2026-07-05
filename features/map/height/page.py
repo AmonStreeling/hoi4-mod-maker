@@ -26,16 +26,13 @@ class HeightPage(QWidget):
     auto_height_requested = pyqtSignal()
     realistic_height_requested = pyqtSignal()    # 真实感高度图 (山链/平原/大陆架)
     height_from_terrain_requested = pyqtSignal()
-    import_heightmap_requested = pyqtSignal()
     ridge_mode_toggled = pyqtSignal(bool)       # 山脉画线模式开关
     ridge_peak_changed = pyqtSignal(int)         # 山峰高度
     ridge_falloff_changed = pyqtSignal(int)      # 衰减距离
     ridge_preview_requested = pyqtSignal()       # 请求刷新预览
     ridge_confirmed = pyqtSignal()               # 确认应用山脉
     ridge_cancelled = pyqtSignal()               # 取消山脉
-    # 局部精修（套索选区 + 算法精修）
-    refine_lasso_mode_toggled = pyqtSignal(bool)
-    refine_whole_map_requested = pyqtSignal()    # 保形精修整张高度图
+    refine_whole_map_requested = pyqtSignal()    # 保形精修整张高度图（生成菜单第③项）
     # 手动微调画笔
     height_brush_mode_changed = pyqtSignal(str)   # "off" | "raise" | "lower" | "smooth"
     height_brush_size_changed = pyqtSignal(int)
@@ -48,13 +45,14 @@ class HeightPage(QWidget):
     def _on_generate_menu(self) -> None:
         """单一生成入口: 弹出选择题, 按用户情况发射对应的既有信号。"""
         from ui.option_dialog import OptionChooserDialog
+        # 顺序 = 用户的做事顺序: ①自动生成 → ②按地形反推 → ③精修当前
         key = OptionChooserDialog.choose(self, tr("height_gen_menu_title"), [
             ("realistic", tr("height_gen_opt_realistic"),
              tr("height_gen_opt_realistic_desc")),
-            ("refine", tr("height_gen_opt_refine"),
-             tr("height_gen_opt_refine_desc")),
             ("from_terrain", tr("height_gen_opt_from_terrain"),
              tr("height_gen_opt_from_terrain_desc")),
+            ("refine", tr("height_gen_opt_refine"),
+             tr("height_gen_opt_refine_desc")),
         ])
         if key == "realistic":
             self.realistic_height_requested.emit()
@@ -97,13 +95,6 @@ class HeightPage(QWidget):
         auto_top_tip.setStyleSheet(f"color: {_DIM}; font-size: 12px; padding: 4px 2px;")
         auto_top_tip.setWordWrap(True)
         auto_top_layout.addWidget(auto_top_tip)
-
-        # 导入高度图 — 也是"一次性整图操作"，跟上面两个并排
-        import_btn = QPushButton(tr("height_import_btn"))
-        import_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
-        import_btn.setToolTip(tr("height_import_tip"))
-        import_btn.clicked.connect(self.import_heightmap_requested.emit)
-        auto_top_layout.addWidget(import_btn)
 
         lay.addWidget(auto_top_box)
 
@@ -234,24 +225,6 @@ class HeightPage(QWidget):
         self._ridge_falloff_slider.valueChanged.connect(lambda _: self._on_ridge_param_changed())
 
         lay.addWidget(ridge_box)
-
-        # ── 局部精修（套索选区 → 山脊/侵蚀/噪声） ──
-        refine_box = _make_section(tr("height_section_refine"))
-        rfl = refine_box.layout()
-
-        self._refine_btn = QPushButton(tr("height_btn_refine"))
-        self._refine_btn.setCheckable(True)
-        self._refine_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
-        self._refine_btn.setToolTip(tr("height_btn_refine_tip"))
-        self._refine_btn.toggled.connect(self.refine_lasso_mode_toggled.emit)
-        rfl.addWidget(self._refine_btn)
-
-        refine_hint = QLabel(tr("height_refine_hint"))
-        refine_hint.setStyleSheet(f"color: {_DIM}; font-size: 12px; padding: 4px 2px;")
-        refine_hint.setWordWrap(True)
-        rfl.addWidget(refine_hint)
-
-        lay.addWidget(refine_box)
 
         # ── 手动微调 ──
         brush_box = _make_section(tr("height_section_manual"))
@@ -391,7 +364,7 @@ class HeightPage(QWidget):
             self.ridge_preview_requested.emit()
 
     def _on_ridge_toggled(self, on: bool) -> None:
-        """山脉画线开关：打开时关闭雕刻画笔 + 精修套索（三者互斥）。"""
+        """山脉画线开关：打开时关闭雕刻画笔（两者互斥）。"""
         if on:
             any_brush = any(b.isChecked() for b in getattr(self, '_brush_btns', {}).values())
             if any_brush:
@@ -400,16 +373,7 @@ class HeightPage(QWidget):
                     b.setChecked(False)
                     b.blockSignals(False)
                 self.height_brush_mode_changed.emit("off")
-            if hasattr(self, "_refine_btn") and self._refine_btn.isChecked():
-                self._refine_btn.setChecked(False)  # emit refine_lasso_mode_toggled(False)
         self.ridge_mode_toggled.emit(on)
-
-    def reset_refine_button(self) -> None:
-        """外部调用：套索完成后自动取消按钮勾选（避免用户再画一次）。"""
-        if hasattr(self, "_refine_btn") and self._refine_btn.isChecked():
-            self._refine_btn.blockSignals(True)
-            self._refine_btn.setChecked(False)
-            self._refine_btn.blockSignals(False)
 
     # ── 雕刻画笔 ──
     def _on_brush_button(self, key: str) -> None:
