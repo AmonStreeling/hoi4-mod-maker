@@ -341,6 +341,8 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.generate_provinces_requested.connect(self._on_generate_provinces)
         tp.validate_requested.connect(self._on_validate)
         tp.smooth_coast_requested.connect(self._on_smooth_coast)
+        # ① 参考底图卡片里的导入按钮 → 复用文件菜单的导入参考图动作
+        tp.import_ref_requested.connect(self._on_import_image)
         tp.clear_new_land_mask_requested.connect(self._on_clear_new_land_mask)
         # 新大陆信号
         # 密度模式信号

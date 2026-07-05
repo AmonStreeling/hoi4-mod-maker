@@ -1,15 +1,10 @@
-"""land feature 页面 — 独立 QWidget, 不依赖 ToolPanel.
-
-2026-07 UI 试点页: 按 MOD 作者的做事顺序排布 —
-① 垫参考底图描海岸 → ② 画陆海+修海岸 → ③ 生成省份。
-分组用 make_card (内嵌标题+步骤徽标), 信号接口与旧版完全一致。
-"""
+﻿"""land feature 页面 — 独立 QWidget, 不依赖 ToolPanel."""
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
+    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QSlider, QLabel, QButtonGroup,
-    QSpinBox, QFrame,
+    QSpinBox, QGridLayout, QFrame,
 )
 
 from data.constants import (
@@ -18,13 +13,14 @@ from data.constants import (
 )
 
 from ui.styles import (
-    make_card as _make_card,
-    make_hint as _make_hint,
-    _DIM, _BORDER, _LABEL_STYLE, _DIM_LABEL_STYLE, _SLIDER_STYLE,
+    make_section as _make_section,
+    _DIM, _BORDER, _SECTION_STYLE, _LABEL_STYLE, _DIM_LABEL_STYLE, _SLIDER_STYLE,
     _TOOL_BTN_STYLE, _TILE_BTN_STYLE, _PRIMARY_BTN_STYLE, _SECONDARY_BTN_STYLE,
     _SPINBOX_STYLE, _color_icon,
 )
 from ui.i18n import tr
+
+
 
 
 class LandPage(QWidget):
@@ -38,7 +34,6 @@ class LandPage(QWidget):
     validate_requested = pyqtSignal()
     smooth_coast_requested = pyqtSignal()
     clear_new_land_mask_requested = pyqtSignal()
-    import_ref_requested = pyqtSignal()          # 导入自定义参考图片
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -49,138 +44,46 @@ class LandPage(QWidget):
         lay.setContentsMargins(8, 8, 8, 8)
         lay.setSpacing(10)
 
-        # ══ ① 参考底图 — 做图第一步: 垫在画布下照着描 ══
-        ref_card = _make_card(tr("land_section_ref"), "①")
-
-        v_lbl = QLabel(tr("land_section_vanilla_ref"))
-        v_lbl.setStyleSheet(_LABEL_STYLE)
-        ref_card.layout().addWidget(v_lbl)
-
-        v_row = QHBoxLayout()
-        v_row.setSpacing(4)
-        self._vanilla_ref_opacity_label = QLabel("30%")
-        self._vanilla_ref_opacity_label.setStyleSheet(_DIM_LABEL_STYLE)
-        self._vanilla_ref_opacity_label.setFixedWidth(36)
-        self._vanilla_ref_opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._vanilla_ref_opacity_slider.setRange(0, 100)
-        self._vanilla_ref_opacity_slider.setValue(30)
-        self._vanilla_ref_opacity_slider.setStyleSheet(_SLIDER_STYLE)
-        self._vanilla_ref_opacity_slider.valueChanged.connect(
-            lambda v: self._vanilla_ref_opacity_label.setText(f"{v}%")
-        )
-        self._vanilla_ref_toggle = QPushButton(tr("land_btn_hide"))
-        self._vanilla_ref_toggle.setCheckable(True)
-        self._vanilla_ref_toggle.setStyleSheet(_SECONDARY_BTN_STYLE)
-        self._vanilla_ref_toggle.setMinimumWidth(50)
-        self._vanilla_ref_toggle.toggled.connect(
-            lambda on: self._vanilla_ref_toggle.setText(
-                tr("land_btn_show") if on else tr("land_btn_hide"))
-        )
-        v_row.addWidget(self._vanilla_ref_opacity_slider)
-        v_row.addWidget(self._vanilla_ref_opacity_label)
-        v_row.addWidget(self._vanilla_ref_toggle)
-        ref_card.layout().addLayout(v_row)
-
-        # 自定义参考图: 导入入口就在这里 (不必去翻文件菜单)
-        c_head = QHBoxLayout()
-        c_lbl = QLabel(tr("land_section_custom_ref"))
-        c_lbl.setStyleSheet(_LABEL_STYLE)
-        c_head.addWidget(c_lbl)
-        c_head.addStretch()
-        import_ref_btn = QPushButton(tr("land_btn_import_ref"))
-        import_ref_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
-        import_ref_btn.setToolTip(tr("land_btn_import_ref_tip"))
-        import_ref_btn.clicked.connect(self.import_ref_requested.emit)
-        c_head.addWidget(import_ref_btn)
-        ref_card.layout().addLayout(c_head)
-
-        c_row = QHBoxLayout()
-        c_row.setSpacing(4)
-        self._ref_opacity_label = QLabel("40%")
-        self._ref_opacity_label.setStyleSheet(_DIM_LABEL_STYLE)
-        self._ref_opacity_label.setFixedWidth(36)
-        self._ref_opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._ref_opacity_slider.setRange(0, 100)
-        self._ref_opacity_slider.setValue(40)
-        self._ref_opacity_slider.setStyleSheet(_SLIDER_STYLE)
-        self._ref_opacity_slider.valueChanged.connect(
-            lambda v: self._ref_opacity_label.setText(f"{v}%")
-        )
-        self._ref_toggle = QPushButton(tr("land_btn_hide"))
-        self._ref_toggle.setCheckable(True)
-        self._ref_toggle.setStyleSheet(_SECONDARY_BTN_STYLE)
-        self._ref_toggle.setMinimumWidth(50)
-        self._ref_toggle.toggled.connect(
-            lambda on: self._ref_toggle.setText(
-                tr("land_btn_show") if on else tr("land_btn_hide"))
-        )
-        c_row.addWidget(self._ref_opacity_slider)
-        c_row.addWidget(self._ref_opacity_label)
-        c_row.addWidget(self._ref_toggle)
-        ref_card.layout().addLayout(c_row)
-
-        scale_row = QHBoxLayout()
-        scale_row.setSpacing(4)
-        slbl = QLabel(tr("land_label_scale"))
-        slbl.setStyleSheet(_LABEL_STYLE)
-        scale_row.addWidget(slbl)
-        self._ref_scale_label = QLabel("100%")
-        self._ref_scale_label.setStyleSheet(_DIM_LABEL_STYLE)
-        scale_row.addWidget(self._ref_scale_label)
-        scale_row.addStretch()
-        self._ref_fit_btn = QPushButton(tr("land_btn_fit_map"))
-        self._ref_fit_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
-        self._ref_fit_btn.setMinimumWidth(70)
-        scale_row.addWidget(self._ref_fit_btn)
-        ref_card.layout().addLayout(scale_row)
-
-        self._ref_scale_slider = QSlider(Qt.Orientation.Horizontal)
-        self._ref_scale_slider.setRange(10, 500)
-        self._ref_scale_slider.setValue(100)
-        self._ref_scale_slider.setStyleSheet(_SLIDER_STYLE)
-        self._ref_scale_slider.valueChanged.connect(
-            lambda v: self._ref_scale_label.setText(f"{v}%")
-        )
-        ref_card.layout().addWidget(self._ref_scale_slider)
-
-        lay.addWidget(ref_card)
-
-        # ══ ② 绘制陆地与海洋 — 类型 / 工具 / 画笔 / 修海岸 ══
-        draw_card = _make_card(tr("land_section_tile_draw"), "②")
-
+        # ── 地块类型（互斥 toggle，默认选陆地）──
+        tile_box = _make_section(tr("land_section_tile_draw"))
         tile_row = QHBoxLayout()
         tile_row.setSpacing(3)
         self._tile_group = QButtonGroup(self)
         self._tile_group.setExclusive(True)
-        for tile_id, label, color, tip_key in [
-            (TILE_LAND, tr("land_draw_land"), (139, 172, 101), "land_draw_land_tip"),
-            (TILE_SEA,  tr("land_draw_sea"), (68, 105, 156), "land_draw_sea_tip"),
-            (TILE_LAKE, tr("land_draw_lake"), (100, 160, 210), "land_draw_lake_tip"),
+        for tile_id, label, color in [
+            (TILE_LAND, tr("land_draw_land"), (139, 172, 101)),
+            (TILE_SEA,  tr("land_draw_sea"), (68, 105, 156)),
+            (TILE_LAKE, tr("land_draw_lake"), (100, 160, 210)),
         ]:
             btn = QPushButton(f"  {label}")
             btn.setIcon(_color_icon(*color))
             btn.setCheckable(True)
             btn.setProperty("tile_id", tile_id)
             btn.setStyleSheet(_TILE_BTN_STYLE)
-            btn.setToolTip(tr(tip_key))
             btn.clicked.connect(lambda _, t=tile_id: self._on_tile_click(t))
             self._tile_group.addButton(btn)
             tile_row.addWidget(btn)
             if tile_id == TILE_LAND:
                 btn.setChecked(True)
-        draw_card.layout().addLayout(tile_row)
+        tile_box.layout().addLayout(tile_row)
+        lay.addWidget(tile_box)
 
-        # 工具行: [绘制] | [增量] | [编辑]
+        # ── 工具 + 画笔大小（合并为一个 section）──
+        # 按性质分三组：[绘制] | [编辑] | [导航]，用竖线视觉分隔
+        tools_box = _make_section(tr("land_section_tools"))
         tl = QHBoxLayout()
         tl.setSpacing(3)
         self._land_tool_group = QButtonGroup(self)
         self._land_tool_group.setExclusive(True)
 
         tool_groups: list[list[tuple[str, str]]] = [
+            # 绘制
             [("brush", tr("land_tool_brush")),
              ("eraser", tr("land_tool_eraser")),
              ("fill", tr("land_tool_fill"))],
+            # 增量（new_land 工具，记入 mask 用于增量生成）
             [("new_land", tr("land_tool_new_land"))],
+            # 编辑（框选）
             [("transform", tr("land_tool_transform"))],
         ]
 
@@ -208,9 +111,9 @@ class LandPage(QWidget):
         self._land_tool_group.buttonClicked.connect(
             lambda b: self.tool_changed.emit(b.property("tool_id"))
         )
-        draw_card.layout().addLayout(tl)
+        tools_box.layout().addLayout(tl)
 
-        # 画笔大小
+        # 画笔大小（内嵌在工具 section 里）
         brush_row = QHBoxLayout()
         lbl = QLabel(tr("land_label_size"))
         lbl.setStyleSheet(_LABEL_STYLE)
@@ -219,35 +122,34 @@ class LandPage(QWidget):
         self._land_brush_label = QLabel(f"{BRUSH_DEFAULT}px")
         self._land_brush_label.setStyleSheet(_DIM_LABEL_STYLE)
         brush_row.addWidget(self._land_brush_label)
-        draw_card.layout().addLayout(brush_row)
+        tools_box.layout().addLayout(brush_row)
 
         self._land_brush_slider = QSlider(Qt.Orientation.Horizontal)
         self._land_brush_slider.setRange(BRUSH_MIN, BRUSH_MAX)
         self._land_brush_slider.setValue(BRUSH_DEFAULT)
         self._land_brush_slider.setStyleSheet(_SLIDER_STYLE)
         self._land_brush_slider.valueChanged.connect(self._on_land_brush)
-        draw_card.layout().addWidget(self._land_brush_slider)
+        tools_box.layout().addWidget(self._land_brush_slider)
 
-        # 平滑海岸线 — 属于"画完修边", 放在绘制卡片里
-        coast_btn = QPushButton(tr("land_btn_smooth_coast"))
-        coast_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
-        coast_btn.setToolTip(tr("land_btn_smooth_coast_tip"))
-        coast_btn.clicked.connect(self.smooth_coast_requested.emit)
-        draw_card.layout().addWidget(coast_btn)
-
-        # 导航/操作提示（含可点击的"清空扩展遮罩"链接）
+        # 导航/操作 入口提示（含可点击的"清空扩展遮罩"链接）
         tip_label = QLabel(tr("land_nav_tip"))
         tip_label.setStyleSheet(f"color: {_DIM}; font-size: 11px; padding: 4px 2px;")
         tip_label.setWordWrap(True)
         tip_label.setTextFormat(Qt.RichText)
         tip_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
         tip_label.linkActivated.connect(self._on_tip_link)
-        draw_card.layout().addWidget(tip_label)
+        tools_box.layout().addWidget(tip_label)
+        lay.addWidget(tools_box)
 
-        lay.addWidget(draw_card)
+        # ── 省份生成 ──
+        gen_box = _make_section(tr("land_section_province_gen"))
 
-        # ══ ③ 生成省份 — 陆海画好之后 ══
-        gen_card = _make_card(tr("land_section_province_gen"), "③")
+        # 平滑海岸线（建议生成省份前使用，所以收进此 section 顶部）
+        coast_btn = QPushButton(tr("land_btn_smooth_coast"))
+        coast_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
+        coast_btn.setToolTip(tr("land_btn_smooth_coast_tip"))
+        coast_btn.clicked.connect(self.smooth_coast_requested.emit)
+        gen_box.layout().addWidget(coast_btn)
 
         spin_row = QHBoxLayout()
         spin_lbl = QLabel(tr("land_label_province_count"))
@@ -259,8 +161,9 @@ class LandPage(QWidget):
         self._province_count_spin.setValue(12000)
         self._province_count_spin.setStyleSheet(_SPINBOX_STYLE)
         spin_row.addWidget(self._province_count_spin)
-        gen_card.layout().addLayout(spin_row)
+        gen_box.layout().addLayout(spin_row)
 
+        # 海洋省份密度
         sea_row = QHBoxLayout()
         sea_lbl = QLabel(tr("land_label_sea_density"))
         sea_lbl.setStyleSheet(_LABEL_STYLE)
@@ -269,7 +172,7 @@ class LandPage(QWidget):
         self._sea_density_label.setStyleSheet(_DIM_LABEL_STYLE)
         sea_row.addStretch()
         sea_row.addWidget(self._sea_density_label)
-        gen_card.layout().addLayout(sea_row)
+        gen_box.layout().addLayout(sea_row)
 
         self._sea_density_slider = QSlider(Qt.Orientation.Horizontal)
         self._sea_density_slider.setRange(5, 100)
@@ -278,8 +181,9 @@ class LandPage(QWidget):
         self._sea_density_slider.valueChanged.connect(
             lambda v: self._sea_density_label.setText(f"{v}%")
         )
-        gen_card.layout().addWidget(self._sea_density_slider)
+        gen_box.layout().addWidget(self._sea_density_slider)
 
+        # 湖泊省份密度
         lake_row = QHBoxLayout()
         lake_lbl = QLabel(tr("land_label_lake_density"))
         lake_lbl.setStyleSheet(_LABEL_STYLE)
@@ -288,7 +192,7 @@ class LandPage(QWidget):
         self._lake_density_label.setStyleSheet(_DIM_LABEL_STYLE)
         lake_row.addStretch()
         lake_row.addWidget(self._lake_density_label)
-        gen_card.layout().addLayout(lake_row)
+        gen_box.layout().addLayout(lake_row)
 
         self._lake_density_slider = QSlider(Qt.Orientation.Horizontal)
         self._lake_density_slider.setRange(10, 100)
@@ -297,8 +201,9 @@ class LandPage(QWidget):
         self._lake_density_slider.valueChanged.connect(
             lambda v: self._lake_density_label.setText(f"{v}%")
         )
-        gen_card.layout().addWidget(self._lake_density_slider)
+        gen_box.layout().addWidget(self._lake_density_slider)
 
+        # 生成 + 验证 并排
         gen_btn_row = QHBoxLayout()
         gen_btn_row.setSpacing(4)
         gen_btn = QPushButton(tr("land_btn_generate"))
@@ -311,12 +216,103 @@ class LandPage(QWidget):
         validate_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
         validate_btn.clicked.connect(self.validate_requested.emit)
         gen_btn_row.addWidget(validate_btn)
-        gen_card.layout().addLayout(gen_btn_row)
+        gen_box.layout().addLayout(gen_btn_row)
 
-        gen_card.layout().addWidget(
-            _make_hint(tr("land_btn_generate_subhint")))
+        # 增量/全量提示（按钮下方常驻小灰字，不依赖 hover）
+        gen_subhint = QLabel(tr("land_btn_generate_subhint"))
+        gen_subhint.setStyleSheet(f"color: {_DIM}; font-size: 11px; padding: 2px;")
+        gen_subhint.setWordWrap(True)
+        gen_box.layout().addWidget(gen_subhint)
 
-        lay.addWidget(gen_card)
+        lay.addWidget(gen_box)
+
+        # ── 参考图（合并为一个 section）──
+        ref_box = _make_section(tr("land_section_ref"))
+
+        # 原版参考
+        v_lbl = QLabel(tr("land_section_vanilla_ref"))
+        v_lbl.setStyleSheet(_LABEL_STYLE)
+        ref_box.layout().addWidget(v_lbl)
+
+        v_row = QHBoxLayout()
+        v_row.setSpacing(4)
+        self._vanilla_ref_opacity_label = QLabel("30%")
+        self._vanilla_ref_opacity_label.setStyleSheet(_DIM_LABEL_STYLE)
+        self._vanilla_ref_opacity_label.setFixedWidth(36)
+        self._vanilla_ref_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._vanilla_ref_opacity_slider.setRange(0, 100)
+        self._vanilla_ref_opacity_slider.setValue(30)
+        self._vanilla_ref_opacity_slider.setStyleSheet(_SLIDER_STYLE)
+        self._vanilla_ref_opacity_slider.valueChanged.connect(
+            lambda v: self._vanilla_ref_opacity_label.setText(f"{v}%")
+        )
+        self._vanilla_ref_toggle = QPushButton(tr("land_btn_hide"))
+        self._vanilla_ref_toggle.setCheckable(True)
+        self._vanilla_ref_toggle.setStyleSheet(_SECONDARY_BTN_STYLE)
+        self._vanilla_ref_toggle.setMinimumWidth(50)
+        self._vanilla_ref_toggle.toggled.connect(
+            lambda on: self._vanilla_ref_toggle.setText(tr("land_btn_show") if on else tr("land_btn_hide"))
+        )
+        v_row.addWidget(self._vanilla_ref_opacity_slider)
+        v_row.addWidget(self._vanilla_ref_opacity_label)
+        v_row.addWidget(self._vanilla_ref_toggle)
+        ref_box.layout().addLayout(v_row)
+
+        # 自定义参考
+        c_lbl = QLabel(tr("land_section_custom_ref"))
+        c_lbl.setStyleSheet(_LABEL_STYLE)
+        ref_box.layout().addWidget(c_lbl)
+
+        c_row = QHBoxLayout()
+        c_row.setSpacing(4)
+        self._ref_opacity_label = QLabel("40%")
+        self._ref_opacity_label.setStyleSheet(_DIM_LABEL_STYLE)
+        self._ref_opacity_label.setFixedWidth(36)
+        self._ref_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._ref_opacity_slider.setRange(0, 100)
+        self._ref_opacity_slider.setValue(40)
+        self._ref_opacity_slider.setStyleSheet(_SLIDER_STYLE)
+        self._ref_opacity_slider.valueChanged.connect(
+            lambda v: self._ref_opacity_label.setText(f"{v}%")
+        )
+        self._ref_toggle = QPushButton(tr("land_btn_hide"))
+        self._ref_toggle.setCheckable(True)
+        self._ref_toggle.setStyleSheet(_SECONDARY_BTN_STYLE)
+        self._ref_toggle.setMinimumWidth(50)
+        self._ref_toggle.toggled.connect(
+            lambda on: self._ref_toggle.setText(tr("land_btn_show") if on else tr("land_btn_hide"))
+        )
+        c_row.addWidget(self._ref_opacity_slider)
+        c_row.addWidget(self._ref_opacity_label)
+        c_row.addWidget(self._ref_toggle)
+        ref_box.layout().addLayout(c_row)
+
+        # 缩放 + 铺满
+        scale_row = QHBoxLayout()
+        scale_row.setSpacing(4)
+        slbl = QLabel(tr("land_label_scale"))
+        slbl.setStyleSheet(_LABEL_STYLE)
+        scale_row.addWidget(slbl)
+        self._ref_scale_label = QLabel("100%")
+        self._ref_scale_label.setStyleSheet(_DIM_LABEL_STYLE)
+        scale_row.addWidget(self._ref_scale_label)
+        scale_row.addStretch()
+        self._ref_fit_btn = QPushButton(tr("land_btn_fit_map"))
+        self._ref_fit_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
+        self._ref_fit_btn.setMinimumWidth(70)
+        scale_row.addWidget(self._ref_fit_btn)
+        ref_box.layout().addLayout(scale_row)
+
+        self._ref_scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self._ref_scale_slider.setRange(10, 500)
+        self._ref_scale_slider.setValue(100)
+        self._ref_scale_slider.setStyleSheet(_SLIDER_STYLE)
+        self._ref_scale_slider.valueChanged.connect(
+            lambda v: self._ref_scale_label.setText(f"{v}%")
+        )
+        ref_box.layout().addWidget(self._ref_scale_slider)
+
+        lay.addWidget(ref_box)
 
         lay.addStretch()
 

@@ -87,7 +87,7 @@ class HeightPage(QWidget):
             f"  font-weight: 600;"
             f"  padding: 8px;"
             f"}}"
-            f"QPushButton:hover {{ background: #9090ff; }}"
+            f"QPushButton:hover {{ background: #6ba1ff; }}"
         )
         gen_menu_btn.setToolTip(tr("height_btn_generate_menu_tooltip"))
         gen_menu_btn.clicked.connect(self._on_generate_menu)

@@ -11,15 +11,15 @@ from PyQt5.QtGui import QColor, QPixmap, QIcon
 
 
 # ── 色板 (v3 可读性优化: 提高对比度 + 字号) ──────────────
-_BG = "#1e1e2e"          # 深紫灰主背景
-_INPUT_BG = "#2a2a3a"     # 面板/输入框背景（原 #252535 略提亮）
-_BORDER = "#4a4a5e"       # 边框（原 #3a3a4a 太暗，提亮便于识别）
-_TEXT = "#f0f0ff"         # 主文字（原 #e0e0f0，冷白 → 更亮）
-_DIM = "#b0b0c8"          # 次要文字/标签（原 #8888a8 对比度 3.5:1 不足，现 4.9:1 达标）
-_ACCENT = "#8080ff"       # 紫蓝强调（原 #6c6cf0 提亮更醒目）
-_ACCENT_HOVER = "#9090ff" # hover 亮色
+_BG = "#17181c"          # 深紫灰主背景
+_INPUT_BG = "#1f2126"     # 面板/输入框背景（原 #1f2126 略提亮）
+_BORDER = "#2c2f36"       # 边框（原 #2c2f36 太暗，提亮便于识别）
+_TEXT = "#e8eaed"         # 主文字（原 #e8eaed，冷白 → 更亮）
+_DIM = "#9aa0ab"          # 次要文字/标签（原 #9aa0ab 对比度 3.5:1 不足，现 4.9:1 达标）
+_ACCENT = "#4f8cff"       # 紫蓝强调（原 #4f8cff 提亮更醒目）
+_ACCENT_HOVER = "#6ba1ff" # hover 亮色
 _SUCCESS = "#22c55e"      # 成功/导出按钮
-_GROUP_HEADER = "#7c7cff" # 分组标题色
+_GROUP_HEADER = "#6ba1ff" # 分组标题色
 
 
 _SECTION_STYLE = f"""
@@ -40,8 +40,8 @@ _SECTION_STYLE = f"""
     }}
 """
 
-_LABEL_STYLE = f"color: {_TEXT}; font-size: 15px;"
-_DIM_LABEL_STYLE = f"color: {_DIM}; font-size: 15px;"
+_LABEL_STYLE = f"color: {_TEXT}; font-size: 13px;"
+_DIM_LABEL_STYLE = f"color: {_DIM}; font-size: 13px;"
 
 _SLIDER_STYLE = f"""
     QSlider::groove:horizontal {{
@@ -52,8 +52,9 @@ _SLIDER_STYLE = f"""
     QSlider::handle:horizontal {{
         width: 14px; height: 14px;
         margin: -5px 0;
-        background: {_ACCENT};
-        border-radius: 7px;
+        background: {_TEXT};
+        border: 2px solid {_ACCENT};
+        border-radius: 8px;
     }}
     QSlider::sub-page:horizontal {{
         background: {_ACCENT};
@@ -63,20 +64,22 @@ _SLIDER_STYLE = f"""
 
 _TOOL_BTN_STYLE = f"""
     QPushButton {{
-        background: {_INPUT_BG};
-        border: 1px solid {_BORDER};
+        background: transparent;
+        border: 1px solid transparent;
         color: {_DIM};
-        padding: 6px 4px;
-        font-size: 15px;
-        border-radius: 4px;
+        padding: 6px 8px;
+        font-size: 13px;
+        border-radius: 6px;
     }}
     QPushButton:checked {{
-        background: {_ACCENT};
-        color: white;
-        border-color: {_ACCENT};
+        background: rgba(79, 140, 255, 0.14);
+        color: {_ACCENT};
+        border: 1px solid {_ACCENT};
+        font-weight: 700;
     }}
     QPushButton:hover:!checked {{
-        background: rgba(108, 108, 240, 0.12);
+        color: {_TEXT};
+        background: rgba(255, 255, 255, 0.05);
     }}
 """
 
@@ -92,12 +95,12 @@ _TILE_BTN_STYLE = f"""
         text-align: left;
     }}
     QPushButton:checked {{
-        background: rgba(108, 108, 240, 0.22);
+        background: rgba(79, 140, 255, 0.22);
         border: 2px solid {_ACCENT};
         font-weight: 600;
     }}
     QPushButton:hover:!checked {{
-        background: rgba(108, 108, 240, 0.08);
+        background: rgba(79, 140, 255, 0.08);
         border-color: {_ACCENT};
     }}
 """
@@ -108,9 +111,9 @@ _PRIMARY_BTN_STYLE = f"""
         border: none;
         color: white;
         padding: 8px 14px;
-        font-size: 15px;
-        font-weight: 600;
-        border-radius: 5px;
+        font-size: 14px;
+        font-weight: 700;
+        border-radius: 6px;
     }}
     QPushButton:hover {{
         background: {_ACCENT_HOVER};
@@ -127,15 +130,16 @@ _PRIMARY_BTN_STYLE = f"""
 
 _SECONDARY_BTN_STYLE = f"""
     QPushButton {{
-        background: {_INPUT_BG};
+        background: transparent;
         border: 1px solid {_BORDER};
         color: {_TEXT};
         padding: 7px 12px;
-        font-size: 15px;
-        border-radius: 5px;
+        font-size: 13px;
+        border-radius: 6px;
     }}
     QPushButton:hover {{
-        background: rgba(255, 255, 255, 0.06);
+        border-color: {_ACCENT};
+        color: {_ACCENT};
     }}
 """
 
@@ -228,6 +232,63 @@ def make_section(title: str):
     return box
 
 
+# ── 卡片式分组 (2026-07 UI 试点, 逐步替代 make_section) ──
+
+_CARD_STYLE = f"""
+    QFrame#card {{
+        background: {_INPUT_BG};
+        border: 1px solid {_BORDER};
+        border-radius: 8px;
+    }}
+"""
+_CARD_TITLE_STYLE = (
+    "color: #c8c9e8; font-size: 14px; font-weight: 700;"
+    " background: transparent; padding: 0;"
+)
+_CARD_STEP_STYLE = (
+    f"color: {_ACCENT}; font-size: 12px; font-weight: 700;"
+    " background: rgba(79, 140, 255, 0.16); border-radius: 9px;"
+    " padding: 1px 8px;"
+)
+
+
+def make_card(title: str, step: str = ""):
+    """扁平卡片分组: 标题在卡片内部首行, 可带步骤徽标。
+
+    与 make_section (QGroupBox 浮动标题) 的区别: 标题行在卡片内,
+    可携带 ①②③ 步骤徽标 — 供"按用户做事顺序排布"的页面使用。
+    用法与 make_section 相同: card.layout().addWidget/addLayout 追加内容。
+    """
+    from PyQt5.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel
+    card = QFrame()
+    card.setObjectName("card")
+    card.setStyleSheet(_CARD_STYLE)
+    outer = QVBoxLayout(card)
+    outer.setContentsMargins(12, 10, 12, 12)
+    outer.setSpacing(8)
+    head = QHBoxLayout()
+    head.setSpacing(8)
+    if step:
+        badge = QLabel(step)
+        badge.setStyleSheet(_CARD_STEP_STYLE)
+        head.addWidget(badge)
+    title_lbl = QLabel(title)
+    title_lbl.setStyleSheet(_CARD_TITLE_STYLE)
+    head.addWidget(title_lbl)
+    head.addStretch()
+    outer.addLayout(head)
+    return card
+
+
+def make_hint(text: str):
+    """低噪声提示行: 统一 11px 暗色小字, 自动换行。"""
+    from PyQt5.QtWidgets import QLabel
+    lbl = QLabel(text)
+    lbl.setStyleSheet(f"color: {_DIM}; font-size: 11px; padding: 2px;")
+    lbl.setWordWrap(True)
+    return lbl
+
+
 def _color_icon(r: int, g: int, b: int, size: int = 12) -> QIcon:
     """生成一个纯色方块图标 (列表 / 按钮装饰用)."""
     px = QPixmap(size, size)
@@ -238,8 +299,8 @@ def _color_icon(r: int, g: int, b: int, size: int = 12) -> QIcon:
 DARK_STYLESHEET = """
 /* 全局 — v2 中性深灰 + 紫蓝 */
 QMainWindow, QWidget {
-    background-color: #1e1e2e;
-    color: #e0e0f0;
+    background-color: #17181c;
+    color: #e8eaed;
     /* Segoe UI 在前: 西里尔/拉丁字母用 Segoe UI (正常 metrics),
        中文 fallback 到 YaHei. YaHei 在前会让西里尔字母按 CJK 全角宽度渲染,
        出现"字母间距异常大 + 文字截断"的 bug. */
@@ -250,22 +311,22 @@ QMainWindow, QWidget {
 /* 菜单栏 */
 QMenuBar {
     background-color: #18182a;
-    border-bottom: 1px solid #3a3a4a;
+    border-bottom: 1px solid #2c2f36;
     padding: 3px;
     font-size: 15px;
 }
 QMenuBar::item {
     padding: 5px 14px;
     background: transparent;
-    color: #e0e0f0;
+    color: #e8eaed;
 }
 QMenuBar::item:selected {
-    background: rgba(108, 108, 240, 0.25);
+    background: rgba(79, 140, 255, 0.25);
     border-radius: 4px;
 }
 QMenu {
-    background-color: #252535;
-    border: 1px solid #3a3a4a;
+    background-color: #1f2126;
+    border: 1px solid #2c2f36;
     padding: 4px;
 }
 QMenu::item {
@@ -274,20 +335,20 @@ QMenu::item {
     font-size: 15px;
 }
 QMenu::item:selected {
-    background: rgba(108, 108, 240, 0.3);
+    background: rgba(79, 140, 255, 0.3);
 }
 QMenu::separator {
     height: 1px;
-    background: #3a3a4a;
+    background: #2c2f36;
     margin: 4px 8px;
 }
 
 /* 状态栏 */
 QStatusBar {
     background-color: #18182a;
-    border-top: 1px solid #3a3a4a;
+    border-top: 1px solid #2c2f36;
     font-size: 15px;
-    color: #8888a8;
+    color: #9aa0ab;
 }
 QStatusBar::item {
     border: none;
@@ -295,8 +356,8 @@ QStatusBar::item {
 
 /* 工具面板 */
 QGroupBox {
-    background-color: #252535;
-    border: 1px solid #3a3a4a;
+    background-color: #1f2126;
+    border: 1px solid #2c2f36;
     border-radius: 6px;
     margin-top: 8px;
     padding: 8px;
@@ -307,41 +368,41 @@ QGroupBox::title {
     subcontrol-origin: margin;
     left: 10px;
     padding: 0 6px;
-    color: #7c7cff;
+    color: #6ba1ff;
     font-size: 15px;
     font-weight: bold;
 }
 
 /* 按钮 */
 QPushButton {
-    background-color: #1e1e2e;
-    border: 1px solid #3a3a4a;
+    background-color: #17181c;
+    border: 1px solid #2c2f36;
     border-radius: 5px;
     padding: 7px 14px;
-    color: #e0e0f0;
+    color: #e8eaed;
     font-size: 15px;
     min-height: 22px;
 }
 QPushButton:hover {
-    border-color: #6c6cf0;
-    background: rgba(108, 108, 240, 0.1);
+    border-color: #4f8cff;
+    background: rgba(79, 140, 255, 0.1);
 }
 QPushButton:pressed {
-    background: rgba(108, 108, 240, 0.2);
+    background: rgba(79, 140, 255, 0.2);
 }
 QPushButton:checked {
-    background: #6c6cf0;
-    border-color: #6c6cf0;
+    background: #4f8cff;
+    border-color: #4f8cff;
     color: white;
 }
 QPushButton#btnPrimary {
-    background: #6c6cf0;
-    border-color: #6c6cf0;
+    background: #4f8cff;
+    border-color: #4f8cff;
     color: white;
     font-weight: 500;
 }
 QPushButton#btnPrimary:hover {
-    background: #7c7cff;
+    background: #6ba1ff;
 }
 QPushButton#btnSuccess {
     background: #22c55e;
@@ -363,18 +424,18 @@ QRadioButton::indicator {
     width: 14px;
     height: 14px;
     border-radius: 7px;
-    border: 2px solid #3a3a4a;
-    background: #1e1e2e;
+    border: 2px solid #2c2f36;
+    background: #17181c;
 }
 QRadioButton::indicator:checked {
-    background: #6c6cf0;
-    border-color: #6c6cf0;
+    background: #4f8cff;
+    border-color: #4f8cff;
 }
 
 /* 滑块 */
 QSlider::groove:horizontal {
     height: 4px;
-    background: #3a3a4a;
+    background: #2c2f36;
     border-radius: 2px;
 }
 QSlider::handle:horizontal {
@@ -382,7 +443,7 @@ QSlider::handle:horizontal {
     height: 14px;
     margin: -5px 0;
     border-radius: 7px;
-    background: #6c6cf0;
+    background: #4f8cff;
 }
 QSlider::handle:horizontal:hover {
     background: #8c8cff;
@@ -390,57 +451,57 @@ QSlider::handle:horizontal:hover {
 
 /* 数值输入 */
 QSpinBox, QDoubleSpinBox {
-    background: #1e1e2e;
-    border: 1px solid #3a3a4a;
+    background: #17181c;
+    border: 1px solid #2c2f36;
     border-radius: 4px;
     padding: 5px 8px;
-    color: #e0e0f0;
+    color: #e8eaed;
     font-size: 15px;
 }
 QSpinBox::up-button, QSpinBox::down-button,
 QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    background: #252535;
+    background: #1f2126;
     border: none;
     width: 16px;
 }
 
 /* 标签 */
 QLabel {
-    color: #e0e0f0;
+    color: #e8eaed;
     font-size: 15px;
 }
 QLabel#labelDim {
-    color: #8888a8;
+    color: #9aa0ab;
     font-size: 15px;
 }
 
 /* 滚动条 */
 QScrollBar:vertical {
     width: 6px;
-    background: #1e1e2e;
+    background: #17181c;
 }
 QScrollBar::handle:vertical {
-    background: #3a3a4a;
+    background: #2c2f36;
     border-radius: 3px;
     min-height: 20px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #8888a8;
+    background: #9aa0ab;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0;
 }
 QScrollBar:horizontal {
     height: 6px;
-    background: #1e1e2e;
+    background: #17181c;
 }
 QScrollBar::handle:horizontal {
-    background: #3a3a4a;
+    background: #2c2f36;
     border-radius: 3px;
     min-width: 20px;
 }
 QScrollBar::handle:horizontal:hover {
-    background: #8888a8;
+    background: #9aa0ab;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     width: 0;
@@ -448,19 +509,19 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
 
 /* 对话框 */
 QDialog {
-    background-color: #252535;
+    background-color: #1f2126;
 }
 QMessageBox {
-    background-color: #252535;
+    background-color: #1f2126;
 }
 QInputDialog {
-    background-color: #252535;
-    color: #e0e0f0;
+    background-color: #1f2126;
+    color: #e8eaed;
 }
 QInputDialog QPushButton {
-    color: #e0e0f0;
+    color: #e8eaed;
     background: #3a3a5a;
-    border: 1px solid #6c6cf0;
+    border: 1px solid #4f8cff;
     border-radius: 4px;
     padding: 4px 16px;
 }
@@ -470,11 +531,11 @@ QInputDialog QPushButton:hover {
 
 /* 工具提示 */
 QToolTip {
-    background: #252535;
-    border: 1px solid #6c6cf0;
+    background: #1f2126;
+    border: 1px solid #4f8cff;
     border-radius: 4px;
     padding: 4px 8px;
-    color: #e0e0f0;
+    color: #e8eaed;
     font-size: 15px;
 }
 

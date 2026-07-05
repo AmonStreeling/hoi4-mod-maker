@@ -93,7 +93,7 @@ class DensityPage(QWidget):
 
         self._color_preview = QLabel()
         self._color_preview.setFixedSize(20, 20)
-        self._color_preview.setStyleSheet("border: 1px solid #3a3a4a; border-radius: 3px;")
+        self._color_preview.setStyleSheet("border: 1px solid #2c2f36; border-radius: 3px;")
         val_row.addWidget(self._color_preview)
 
         self._val_label = QLabel("80%")

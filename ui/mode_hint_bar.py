@@ -6,11 +6,11 @@ from PyQt5.QtCore import Qt, QSettings
 
 from ui.i18n import tr
 
-_ACCENT = "#6c6cf0"
-_HINT_BG = "rgba(108, 108, 240, 0.10)"
-_BORDER = "#3a3a4a"
-_TEXT = "#e0e0f0"
-_DIM = "#8888a8"
+_ACCENT = "#4f8cff"
+_HINT_BG = "rgba(79, 140, 255, 0.10)"
+_BORDER = "#2c2f36"
+_TEXT = "#e8eaed"
+_DIM = "#9aa0ab"
 
 _SETTINGS_GROUP = "ModeHints"
 

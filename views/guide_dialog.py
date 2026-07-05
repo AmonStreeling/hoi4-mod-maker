@@ -10,12 +10,12 @@ from PyQt5.QtGui import QFont
 
 from ui.i18n import tr
 
-_BG = "#1e1e2e"
-_INPUT_BG = "#252535"
-_BORDER = "#3a3a4a"
-_TEXT = "#e0e0f0"
-_DIM = "#8888a8"
-_ACCENT = "#6c6cf0"
+_BG = "#17181c"
+_INPUT_BG = "#1f2126"
+_BORDER = "#2c2f36"
+_TEXT = "#e8eaed"
+_DIM = "#9aa0ab"
+_ACCENT = "#4f8cff"
 
 _SETTINGS_KEY = "GuideDialog/dont_show"
 
@@ -150,7 +150,7 @@ class GuideDialog(QDialog):
             }}
             QPushButton:hover {{
                 border-color: {_ACCENT};
-                background: rgba(108, 108, 240, 0.12);
+                background: rgba(79, 140, 255, 0.12);
             }}
             QPushButton:disabled {{
                 color: {_BORDER};
@@ -167,7 +167,7 @@ class GuideDialog(QDialog):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                background: #7c7cff;
+                background: #6ba1ff;
             }}
         """
 
@@ -201,7 +201,7 @@ class GuideDialog(QDialog):
             if i == self._current:
                 lbl.setStyleSheet(
                     f"color: white; font-size: 13px; font-weight: bold;"
-                    f" padding-left: 12px; background: rgba(108, 108, 240, 0.2);"
+                    f" padding-left: 12px; background: rgba(79, 140, 255, 0.2);"
                     f" border-left: 3px solid {_ACCENT};"
                 )
             else:

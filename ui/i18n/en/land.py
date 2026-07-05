@@ -50,7 +50,7 @@ STRINGS: dict[str, str] = {
     "land_tool_eraser": "Eraser",
     "land_tool_fill": "Fill",
     "land_tool_fill_tip": "Click a region to flood-fill connected area of same type (shortcut: F)",
-    "land_nav_tip": "💡 Middle-click = pan | Tools menu = Quick Init | Toolbar adds [Extend Land] | <a href='clear_new_land_mask' style='color:#8080ff;'>Clear extend mask</a>",
+    "land_nav_tip": "💡 Middle-click = pan | Tools menu = Quick Init | Toolbar adds [Extend Land] | <a href='clear_new_land_mask' style='color:#4f8cff;'>Clear extend mask</a>",
     "status_extend_mask_cleared": "Extend mask cleared (land kept).",
     "status_no_prov_mask_ignored": "⚠️ Extend mask has no effect without provinces; auto-cleared, falling back to full generation.",
     "land_tool_transform": "Transform",

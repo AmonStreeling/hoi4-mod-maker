@@ -48,7 +48,7 @@ class ProvincialTerrainPage(QWidget):
         self._assign_chk = QCheckBox(tr("pterrain_assign_mode"))
         self._assign_chk.setChecked(False)  # 默认关闭，避免误改
         self._assign_chk.setStyleSheet(
-            f"QCheckBox {{ color: #f0f0ff; font-size: 14px; font-weight: 600; padding: 6px; }}"
+            f"QCheckBox {{ color: #e8eaed; font-size: 14px; font-weight: 600; padding: 6px; }}"
             f"QCheckBox:checked {{ color: #86efac; }}"  # 开启后变绿
         )
         self._assign_chk.toggled.connect(self.assign_mode_changed)

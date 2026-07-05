@@ -81,7 +81,7 @@ class StatePage(QWidget):
         self._assign_chk.setChecked(False)
         self._assign_chk.setToolTip(tr("state_assign_drag_label") + " — 再次点击退出")
         self._assign_chk.setStyleSheet(
-            "QCheckBox { color: #f0f0ff; font-size: 13px; font-weight: 600; padding: 6px; }"
+            "QCheckBox { color: #e8eaed; font-size: 13px; font-weight: 600; padding: 6px; }"
             "QCheckBox:checked { color: #86efac; }"
         )
         self._assign_chk.toggled.connect(self._on_assign_toggled)

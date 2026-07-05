@@ -72,7 +72,7 @@ class StrategicRegionPage(QWidget):
         self._assign_chk = QCheckBox(tr("sr_assign_drag_label"))
         self._assign_chk.setChecked(False)
         self._assign_chk.setStyleSheet(
-            "QCheckBox { color: #f0f0ff; font-size: 13px; font-weight: 600; padding: 6px; }"
+            "QCheckBox { color: #e8eaed; font-size: 13px; font-weight: 600; padding: 6px; }"
             "QCheckBox:checked { color: #86efac; }"
         )
         self._assign_chk.toggled.connect(self.sr_assign_mode_changed.emit)

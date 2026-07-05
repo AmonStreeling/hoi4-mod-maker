@@ -90,13 +90,13 @@ _ICON_BTN_STYLE = f"""
         margin: 0;
     }}
     QPushButton:checked {{
-        background: rgba(108, 108, 240, 0.15);
+        background: rgba(79, 140, 255, 0.15);
         border-left: 3px solid {_ACCENT};
         color: white;
         font-weight: 600;
     }}
     QPushButton:hover:!checked {{
-        background: rgba(108, 108, 240, 0.06);
+        background: rgba(79, 140, 255, 0.06);
         color: {_TEXT};
     }}
 """
@@ -258,6 +258,7 @@ class ToolPanel(QWidget):
     generate_provinces_requested = pyqtSignal(int)
     validate_requested = pyqtSignal()
     smooth_coast_requested = pyqtSignal()
+    import_ref_requested = pyqtSignal()
     clear_new_land_mask_requested = pyqtSignal()
 
     # 密度模式信号
@@ -514,6 +515,7 @@ class ToolPanel(QWidget):
         p.validate_requested.connect(self.validate_requested)
         p.smooth_coast_requested.connect(self.smooth_coast_requested)
         p.clear_new_land_mask_requested.connect(self.clear_new_land_mask_requested)
+        p.import_ref_requested.connect(self.import_ref_requested)
 
     def _connect_density_signals(self) -> None:
         p = self._density_page

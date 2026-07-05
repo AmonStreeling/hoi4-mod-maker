@@ -34,7 +34,7 @@ _CARD_STYLE = f"""
     }}
     QPushButton:hover {{
         border-color: {_ACCENT};
-        background: rgba(108, 108, 240, 0.12);
+        background: rgba(79, 140, 255, 0.12);
     }}
 """
 

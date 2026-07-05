@@ -84,7 +84,7 @@ class ContinentPage(QWidget):
         al.addWidget(self._by_state_cb)
 
         self._continent_status = QLabel("")
-        self._continent_status.setStyleSheet("color: #6c6cf0; font-size: 11px;")
+        self._continent_status.setStyleSheet("color: #4f8cff; font-size: 11px;")
         al.addWidget(self._continent_status)
         lay.addWidget(assign_box)
 

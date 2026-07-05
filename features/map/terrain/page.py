@@ -117,8 +117,8 @@ class TerrainPage(QWidget):
         concept_hint.setTextFormat(Qt.RichText)
         concept_hint.setStyleSheet(
             f"color: {_DIM}; font-size: 11px; padding: 6px 8px;"
-            f" background: rgba(108, 108, 240, 0.08);"
-            f" border-left: 3px solid #6c6cf0; border-radius: 3px;"
+            f" background: rgba(79, 140, 255, 0.08);"
+            f" border-left: 3px solid #4f8cff; border-radius: 3px;"
         )
         outer.addWidget(concept_hint)
 

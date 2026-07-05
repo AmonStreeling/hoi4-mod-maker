@@ -15,13 +15,13 @@ from ui.i18n import tr
 
 
 # ── 色板 (与 ui/styles.py 保持一致) ──
-_BG = "#1e1e2e"
-_INPUT_BG = "#252535"
-_BORDER = "#3a3a4a"
-_TEXT = "#e0e0f0"
-_DIM = "#8888a8"
-_ACCENT = "#6c6cf0"
-_ACCENT_HOVER = "#7c7cff"
+_BG = "#17181c"
+_INPUT_BG = "#1f2126"
+_BORDER = "#2c2f36"
+_TEXT = "#e8eaed"
+_DIM = "#9aa0ab"
+_ACCENT = "#4f8cff"
+_ACCENT_HOVER = "#6ba1ff"
 
 _MAX_RECENT = 10
 
@@ -179,7 +179,7 @@ class WelcomePage(QWidget):
             }}
             QPushButton:hover {{
                 border-color: {_ACCENT};
-                background: rgba(108, 108, 240, 0.12);
+                background: rgba(79, 140, 255, 0.12);
             }}
         """
 

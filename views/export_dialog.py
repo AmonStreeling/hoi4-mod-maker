@@ -237,9 +237,9 @@ class ExportDialog(QDialog):
 
         self._btn_auto = QPushButton(tr("export_btn_auto"))
         self._btn_auto.setStyleSheet(
-            "QPushButton { background: #6c6cf0; color: white; padding: 8px 20px;"
+            "QPushButton { background: #4f8cff; color: white; padding: 8px 20px;"
             " border-radius: 4px; font-weight: bold; }"
-            "QPushButton:hover { background: #7c7cff; }"
+            "QPushButton:hover { background: #6ba1ff; }"
             "QPushButton:disabled { background: #444; color: #888; }"
         )
         self._btn_auto.clicked.connect(self._on_auto_export)
@@ -304,7 +304,7 @@ class ExportDialog(QDialog):
             # 名称 + 详情
             text = f"<b>{item.name}</b> — {item.detail}"
             if item.can_auto and item.status != "ok":
-                text += f' <span style="color: #6c6cf0;">[{tr("export_can_auto")}]</span>'
+                text += f' <span style="color: #4f8cff;">[{tr("export_can_auto")}]</span>'
             info = QLabel(text)
             info.setWordWrap(True)
             info.setTextFormat(Qt.RichText)

@@ -83,5 +83,5 @@ class ColormapPage(QWidget):
             self.colormap_color_changed.emit(attr_name, qc.red(), qc.green(), qc.blue())
             swatch.setStyleSheet(
                 f"background-color: rgb({qc.red()}, {qc.green()}, {qc.blue()});"
-                f" border: 1px solid #3a3a4a;"
+                f" border: 1px solid #2c2f36;"
             )

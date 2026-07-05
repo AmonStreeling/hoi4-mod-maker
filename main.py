@@ -71,7 +71,7 @@ QStatusBar, QHeaderView, QScrollBar, QToolTip {
         import qdarktheme
         _qss = qdarktheme.load_stylesheet(
             "dark",
-            custom_colors={"primary": "#6c6cf0"},
+            custom_colors={"primary": "#4f8cff"},
         )
         app.setStyleSheet(_qss + _FONT_OVERRIDE_CSS)
     except Exception as e:
