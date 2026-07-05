@@ -332,16 +332,12 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp._ref_scale_slider.valueChanged.connect(
             lambda v: cv.set_ref_scale(v / 100.0)
         )
-        tp._ref_fit_btn.clicked.connect(cv.fit_ref_to_map)
         tp._ref_toggle.toggled.connect(
             lambda on: cv.toggle_ref_image(not on)
         )
-        # 原版参考: 缩放 + 铺满（与自定义图对称）
+        # 原版参考: 缩放（与自定义图对称）
         tp._vanilla_ref_scale_slider.valueChanged.connect(
             lambda v: cv.set_ref_layer_scale("vanilla", v / 100.0)
-        )
-        tp._vanilla_ref_fit_btn.clicked.connect(
-            lambda: cv.fit_ref_layer("vanilla")
         )
         # 打开原版参考（复用文件菜单动作）
         tp.open_vanilla_requested.connect(self._on_load_vanilla_ref)

@@ -671,20 +671,12 @@ class ToolPanel(QWidget):
         return self._land_page._ref_scale_slider
 
     @property
-    def _ref_fit_btn(self) -> QPushButton:
-        return self._land_page._ref_fit_btn
-
-    @property
     def _ref_toggle(self) -> QPushButton:
         return self._land_page._ref_toggle
 
     @property
     def _vanilla_ref_scale_slider(self) -> QSlider:
         return self._land_page._vanilla_ref_scale_slider
-
-    @property
-    def _vanilla_ref_fit_btn(self) -> QPushButton:
-        return self._land_page._vanilla_ref_fit_btn
 
     # 调整参考图模式 — 委托 land page
     def current_adjust_target(self) -> str:

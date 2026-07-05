@@ -1,6 +1,6 @@
 """
 参考图管理 Mixin — 用户参考图 + 原版地图参考层
-两张图共用同一套"参考图层"结构, 各自独立: 加载/透明度/缩放/移动/铺满/显隐。
+两张图共用同一套"参考图层"结构, 各自独立: 加载/透明度/缩放/移动/显隐。
 旧方法名保留为薄包装, main_window / input_router 的既有调用不受影响。
 """
 from PyQt5.QtCore import Qt
@@ -29,14 +29,24 @@ class RefImageMixin:
     # ── 通用图层接口 ──────────────────────────────────
 
     def load_ref_layer(self, key: str, file_path: str, fit: bool = False) -> bool:
-        """加载一张参考图。fit=True 时直接拉伸铺满地图。"""
+        """加载一张参考图。fit=True 时等比缩放到正好放进地图（不拉伸变形）。"""
         layer = self._ref_layers[key]
         pixmap = QPixmap(file_path)
         if pixmap.isNull():
             return False
         layer.original = pixmap
         if fit:
-            self.fit_ref_layer(key)
+            # 等比 contain: 取宽高两个方向缩放比里较小的, 不变形
+            scale = min(self.map_w / pixmap.width(),
+                        self.map_h / pixmap.height())
+            self.set_ref_layer_scale(key, scale)
+            # 自动缩放改了 scale, 回写页面滑条（main_window 已接此信号）
+            self.ref_adjust_scale_changed.emit(key, layer.scale)
+            shown = layer.item.pixmap()
+            layer.item.setPos(
+                (self.map_w - shown.width()) / 2,
+                (self.map_h - shown.height()) / 2,
+            )
         else:
             layer.scale = 1.0
             layer.item.setPixmap(pixmap)
@@ -72,22 +82,6 @@ class RefImageMixin:
         if getattr(self, '_ref_adjust_target', None) == key:
             self._update_ref_adjust_border()
 
-    def fit_ref_layer(self, key: str) -> None:
-        """拉伸铺满整张地图。"""
-        layer = self._ref_layers[key]
-        if layer.original.isNull():
-            return
-        scaled = layer.original.scaled(
-            self.map_w, self.map_h,
-            Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-        layer.item.setPixmap(scaled)
-        layer.item.setPos(0, 0)
-        layer.scale = self.map_w / layer.original.width()
-        if getattr(self, '_ref_adjust_target', None) == key:
-            self._update_ref_adjust_border()
-        # fit 改了 scale, 回写页面滑条（main_window 已接 ref_adjust_scale_changed）
-        self.ref_adjust_scale_changed.emit(key, layer.scale)
-
     def toggle_ref_layer(self, key: str, visible: bool) -> None:
         self._ref_layers[key].item.setVisible(visible)
 
@@ -100,7 +94,7 @@ class RefImageMixin:
         return ok
 
     def load_vanilla_reference(self, file_path: str) -> bool:
-        """加载原版地图参考（独立于用户参考图, 默认铺满）。"""
+        """加载原版地图参考（独立于用户参考图, 等比缩放居中）。"""
         return self.load_ref_layer(self.REF_VANILLA, file_path, fit=True)
 
     def set_vanilla_ref_opacity(self, opacity: float) -> None:
@@ -114,9 +108,6 @@ class RefImageMixin:
 
     def set_ref_scale(self, scale: float) -> None:
         self.set_ref_layer_scale(self.REF_CUSTOM, scale)
-
-    def fit_ref_to_map(self) -> None:
-        self.fit_ref_layer(self.REF_CUSTOM)
 
     def move_ref_image(self, dx: int, dy: int) -> None:
         self.move_ref_layer(self.REF_CUSTOM, dx, dy)

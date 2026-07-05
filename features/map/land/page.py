@@ -81,19 +81,19 @@ class LandPage(QWidget):
         load_row.addWidget(self._open_vanilla_btn)
         ref_card.layout().addLayout(load_row)
 
-        # 原版参考: 透明度 + 缩放 + 铺满 + 隐藏
+        # 原版参考: 透明度 + 缩放 + 隐藏
         (self._vanilla_ref_opacity_slider, self._vanilla_ref_opacity_label,
          self._vanilla_ref_toggle) = self._add_ref_group(
             ref_card, tr("land_section_vanilla_ref"), opacity=30)
-        (self._vanilla_ref_scale_slider, self._vanilla_ref_scale_label,
-         self._vanilla_ref_fit_btn) = self._add_scale_row(ref_card)
+        (self._vanilla_ref_scale_slider,
+         self._vanilla_ref_scale_label) = self._add_scale_row(ref_card)
 
         # 自定义参考图: 同样一套
         (self._ref_opacity_slider, self._ref_opacity_label,
          self._ref_toggle) = self._add_ref_group(
             ref_card, tr("land_section_custom_ref"), opacity=40)
-        (self._ref_scale_slider, self._ref_scale_label,
-         self._ref_fit_btn) = self._add_scale_row(ref_card)
+        (self._ref_scale_slider,
+         self._ref_scale_label) = self._add_scale_row(ref_card)
 
         # 调整参考图位置（开关 + 调整对象单选）
         self._ref_adjust_btn = QPushButton(tr("land_btn_ref_adjust"))
@@ -338,7 +338,7 @@ class LandPage(QWidget):
         return slider, val, toggle
 
     def _add_scale_row(self, card):
-        """一行缩放控制: 缩放滑条 + % + 铺满按钮。"""
+        """一行缩放控制: 缩放滑条 + %。"""
         row = QHBoxLayout()
         row.setSpacing(4)
         cap = QLabel(tr("land_label_scale"))
@@ -352,14 +352,10 @@ class LandPage(QWidget):
         val.setStyleSheet(_DIM_LABEL_STYLE)
         val.setFixedWidth(36)
         slider.valueChanged.connect(lambda v, l=val: l.setText(f"{v}%"))
-        fit = QPushButton(tr("land_btn_fit"))
-        fit.setStyleSheet(_SECONDARY_BTN_STYLE)
-        fit.setMinimumWidth(50)
         row.addWidget(slider)
         row.addWidget(val)
-        row.addWidget(fit)
         card.layout().addLayout(row)
-        return slider, val, fit
+        return slider, val
 
     def _on_adjust_toggled(self, on: bool) -> None:
         self._ref_adjust_btn.setText(

@@ -45,13 +45,20 @@ def test_load_custom_centers_at_original_size(canvas, tmp_path):
     assert layer.item.pos().y() == (canvas.map_h - 32) / 2
 
 
-def test_load_vanilla_fit_fills_map(canvas, tmp_path):
-    path = _make_png(tmp_path)
+def test_load_vanilla_fit_contains_no_stretch(canvas, tmp_path):
+    """fit 加载 = 等比缩放放进地图并居中, 不拉伸变形（铺满功能已删除）。"""
+    path = _make_png(tmp_path, 4096, 2048)   # 2:1 大图, 避开缩放钳位
     assert canvas.load_ref_layer("vanilla", path, fit=True)
     layer = canvas._ref_layers["vanilla"]
-    assert layer.item.pixmap().width() == canvas.map_w
-    assert layer.item.pixmap().height() == canvas.map_h
-    assert layer.item.pos().x() == 0
+    pm = layer.item.pixmap()
+    # 等比: 宽高比保持 2:1（允许 1-2 像素取整误差）
+    assert abs(pm.width() - 2 * pm.height()) <= 2
+    # 放得进地图, 且至少一边基本贴满
+    assert pm.width() <= canvas.map_w and pm.height() <= canvas.map_h
+    assert max(pm.width() / canvas.map_w, pm.height() / canvas.map_h) > 0.99
+    # 居中
+    assert layer.item.pos().x() == (canvas.map_w - pm.width()) / 2
+    assert layer.item.pos().y() == (canvas.map_h - pm.height()) / 2
 
 
 def test_scale_layers_independent(canvas, tmp_path):
@@ -64,15 +71,13 @@ def test_scale_layers_independent(canvas, tmp_path):
     assert canvas._ref_layers["vanilla"].scale == 1.0
 
 
-def test_move_and_fit_layer(canvas, tmp_path):
+def test_move_layer(canvas, tmp_path):
     canvas.load_ref_layer("vanilla", _make_png(tmp_path))
     canvas.move_ref_layer("vanilla", 10, -5)
     pos = canvas._ref_layers["vanilla"].item.pos()
     x0 = (canvas.map_w - 64) / 2
     y0 = (canvas.map_h - 32) / 2
     assert (pos.x(), pos.y()) == (x0 + 10, y0 - 5)
-    canvas.fit_ref_layer("vanilla")
-    assert canvas._ref_layers["vanilla"].item.pos().x() == 0
 
 
 def test_legacy_wrappers_route_to_layers(canvas, tmp_path):
@@ -85,8 +90,6 @@ def test_legacy_wrappers_route_to_layers(canvas, tmp_path):
     assert canvas._ref_layers["vanilla"].item.opacity() == pytest.approx(0.7)
     canvas.toggle_ref_image(False)
     assert not canvas._ref_layers["custom"].item.isVisible()
-    canvas.fit_ref_to_map()
-    assert canvas._ref_layers["custom"].item.pixmap().width() == canvas.map_w
 
 
 from PyQt5.QtCore import Qt, QEvent, QPointF, QPoint
@@ -162,14 +165,14 @@ def test_esc_during_drag_stops_dragging(canvas, tmp_path):
     assert canvas._ref_layers["custom"].item.pos() == pos_before
 
 
-def test_fit_emits_scale_changed(canvas, tmp_path):
-    canvas.load_ref_layer("custom", _make_png(tmp_path))
+def test_fit_load_emits_scale_changed(canvas, tmp_path):
+    """fit 加载改变 scale 后必须回写页面滑条（否则滑条停在旧值, 下次拖动突跳）。"""
     got = []
     canvas.ref_adjust_scale_changed.connect(lambda t, s: got.append((t, s)))
-    canvas.fit_ref_layer("custom")
+    canvas.load_ref_layer("vanilla", _make_png(tmp_path, 4096, 2048), fit=True)
     assert len(got) == 1
-    assert got[0][0] == "custom"
-    assert got[0][1] == pytest.approx(canvas.map_w / 64)
+    assert got[0][0] == "vanilla"
+    assert got[0][1] == pytest.approx(canvas._ref_layers["vanilla"].scale)
 
 
 def test_adjust_mode_blocks_double_click(canvas, tmp_path):

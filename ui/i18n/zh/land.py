@@ -42,7 +42,6 @@ STRINGS: dict[str, str] = {
     "land_btn_import_ref_tip": "选择一张图片（世界轮廓草图、手绘地图、真实地图截图都可以）垫在画布下面，照着描海岸线。",
     "land_btn_open_vanilla": "打开原版参考",
     "land_btn_open_vanilla_tip": "一键从游戏目录加载原版地图垫底，照着原版地形描。",
-    "land_btn_fit": "铺满",
     "land_btn_ref_adjust": "🖐 调整参考图位置",
     "land_btn_ref_adjust_active": "🖐 正在调整参考图（点击或 ESC 退出）",
     "land_label_adjust_target": "调整对象:",

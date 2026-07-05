@@ -23,11 +23,13 @@ def test_open_vanilla_signal(page):
     assert fired == [1]
 
 
-def test_vanilla_has_scale_and_fit(page):
+def test_vanilla_has_scale_slider(page):
     assert page._vanilla_ref_scale_slider.minimum() == 10
     assert page._vanilla_ref_scale_slider.maximum() == 500
     assert page._vanilla_ref_scale_slider.value() == 100
-    assert page._vanilla_ref_fit_btn is not None
+    # 铺满按钮已删除（强制拉伸变形, 用户裁定移除）
+    assert not hasattr(page, "_vanilla_ref_fit_btn")
+    assert not hasattr(page, "_ref_fit_btn")
 
 
 def test_adjust_toggle_emits_and_enables_radios(page):
