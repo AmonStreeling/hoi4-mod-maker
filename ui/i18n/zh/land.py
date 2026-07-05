@@ -52,7 +52,7 @@ STRINGS: dict[str, str] = {
     "land_draw_sea_tip": "绘制海洋：海军可以航行、可以划海战区、沿岸能建港口和海军基地。想让这片水有海军戏份就用它。",
     "land_draw_lake_tip": "绘制湖泊：不可通航的内陆死水——不能放海军、不能建港（游戏里的里海就是湖）。封闭内陆水面、地理阻隔用它。",
     "land_section_province_gen": "生成省份（陆地海洋画好之后）",
-    "land_section_ref": "参考底图（垫在画布下照着描）",
+    "land_section_ref": "导入底图",
     "land_section_tile_draw": "绘制陆地与海洋",
     "land_section_tools": "工具",
     "land_section_vanilla_ref": "原版参考",
