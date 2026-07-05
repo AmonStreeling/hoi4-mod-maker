@@ -8,7 +8,7 @@
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QSlider, QLabel, QButtonGroup,
+    QPushButton, QSlider, QLabel, QButtonGroup, QRadioButton,
     QSpinBox, QFrame,
 )
 
@@ -27,6 +27,17 @@ from ui.styles import (
 from ui.i18n import tr
 
 
+# 调整模式开关: 平时次要按钮外观, 勾选后橙色 = "进行中"（与变换工具一致）
+_ADJUST_BTN_STYLE = _SECONDARY_BTN_STYLE + """
+    QPushButton:checked {
+        background: #f97316;
+        border: 2px solid #fb923c;
+        color: white;
+        font-weight: 700;
+    }
+"""
+
+
 class LandPage(QWidget):
     """陆地/海洋/湖泊绘制页面."""
 
@@ -39,6 +50,9 @@ class LandPage(QWidget):
     smooth_coast_requested = pyqtSignal()
     clear_new_land_mask_requested = pyqtSignal()
     import_ref_requested = pyqtSignal()          # 导入自定义参考图片
+    open_vanilla_requested = pyqtSignal()        # 打开原版参考
+    ref_adjust_toggled = pyqtSignal(bool)        # 调整参考图模式开关
+    ref_adjust_target_changed = pyqtSignal(str)  # 调整对象: "custom"/"vanilla"
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -52,97 +66,63 @@ class LandPage(QWidget):
         # ══ ① 参考底图 — 做图第一步: 垫在画布下照着描 ══
         ref_card = _make_card(tr("land_section_ref"), "①")
 
-        v_lbl = QLabel(tr("land_section_vanilla_ref"))
-        v_lbl.setStyleSheet(_LABEL_STYLE)
-        ref_card.layout().addWidget(v_lbl)
-
-        v_row = QHBoxLayout()
-        v_row.setSpacing(4)
-        self._vanilla_ref_opacity_label = QLabel("30%")
-        self._vanilla_ref_opacity_label.setStyleSheet(_DIM_LABEL_STYLE)
-        self._vanilla_ref_opacity_label.setFixedWidth(36)
-        self._vanilla_ref_opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._vanilla_ref_opacity_slider.setRange(0, 100)
-        self._vanilla_ref_opacity_slider.setValue(30)
-        self._vanilla_ref_opacity_slider.setStyleSheet(_SLIDER_STYLE)
-        self._vanilla_ref_opacity_slider.valueChanged.connect(
-            lambda v: self._vanilla_ref_opacity_label.setText(f"{v}%")
-        )
-        self._vanilla_ref_toggle = QPushButton(tr("land_btn_hide"))
-        self._vanilla_ref_toggle.setCheckable(True)
-        self._vanilla_ref_toggle.setStyleSheet(_SECONDARY_BTN_STYLE)
-        self._vanilla_ref_toggle.setMinimumWidth(50)
-        self._vanilla_ref_toggle.toggled.connect(
-            lambda on: self._vanilla_ref_toggle.setText(
-                tr("land_btn_show") if on else tr("land_btn_hide"))
-        )
-        v_row.addWidget(self._vanilla_ref_opacity_slider)
-        v_row.addWidget(self._vanilla_ref_opacity_label)
-        v_row.addWidget(self._vanilla_ref_toggle)
-        ref_card.layout().addLayout(v_row)
-
-        # 自定义参考图: 导入入口就在这里 (不必去翻文件菜单)
-        c_head = QHBoxLayout()
-        c_lbl = QLabel(tr("land_section_custom_ref"))
-        c_lbl.setStyleSheet(_LABEL_STYLE)
-        c_head.addWidget(c_lbl)
-        c_head.addStretch()
+        # 顶部: 两个加载入口（导入自定义 / 打开原版）
+        load_row = QHBoxLayout()
+        load_row.setSpacing(4)
         import_ref_btn = QPushButton(tr("land_btn_import_ref"))
         import_ref_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
         import_ref_btn.setToolTip(tr("land_btn_import_ref_tip"))
         import_ref_btn.clicked.connect(self.import_ref_requested.emit)
-        c_head.addWidget(import_ref_btn)
-        ref_card.layout().addLayout(c_head)
+        load_row.addWidget(import_ref_btn)
+        self._open_vanilla_btn = QPushButton(tr("land_btn_open_vanilla"))
+        self._open_vanilla_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
+        self._open_vanilla_btn.setToolTip(tr("land_btn_open_vanilla_tip"))
+        self._open_vanilla_btn.clicked.connect(self.open_vanilla_requested.emit)
+        load_row.addWidget(self._open_vanilla_btn)
+        ref_card.layout().addLayout(load_row)
 
-        c_row = QHBoxLayout()
-        c_row.setSpacing(4)
-        self._ref_opacity_label = QLabel("40%")
-        self._ref_opacity_label.setStyleSheet(_DIM_LABEL_STYLE)
-        self._ref_opacity_label.setFixedWidth(36)
-        self._ref_opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._ref_opacity_slider.setRange(0, 100)
-        self._ref_opacity_slider.setValue(40)
-        self._ref_opacity_slider.setStyleSheet(_SLIDER_STYLE)
-        self._ref_opacity_slider.valueChanged.connect(
-            lambda v: self._ref_opacity_label.setText(f"{v}%")
-        )
-        self._ref_toggle = QPushButton(tr("land_btn_hide"))
-        self._ref_toggle.setCheckable(True)
-        self._ref_toggle.setStyleSheet(_SECONDARY_BTN_STYLE)
-        self._ref_toggle.setMinimumWidth(50)
-        self._ref_toggle.toggled.connect(
-            lambda on: self._ref_toggle.setText(
-                tr("land_btn_show") if on else tr("land_btn_hide"))
-        )
-        c_row.addWidget(self._ref_opacity_slider)
-        c_row.addWidget(self._ref_opacity_label)
-        c_row.addWidget(self._ref_toggle)
-        ref_card.layout().addLayout(c_row)
+        # 原版参考: 透明度 + 缩放 + 铺满 + 隐藏
+        (self._vanilla_ref_opacity_slider, self._vanilla_ref_opacity_label,
+         self._vanilla_ref_toggle) = self._add_ref_group(
+            ref_card, tr("land_section_vanilla_ref"), opacity=30)
+        (self._vanilla_ref_scale_slider, self._vanilla_ref_scale_label,
+         self._vanilla_ref_fit_btn) = self._add_scale_row(ref_card)
 
-        scale_row = QHBoxLayout()
-        scale_row.setSpacing(4)
-        slbl = QLabel(tr("land_label_scale"))
-        slbl.setStyleSheet(_LABEL_STYLE)
-        scale_row.addWidget(slbl)
-        self._ref_scale_label = QLabel("100%")
-        self._ref_scale_label.setStyleSheet(_DIM_LABEL_STYLE)
-        scale_row.addWidget(self._ref_scale_label)
-        scale_row.addStretch()
-        self._ref_fit_btn = QPushButton(tr("land_btn_fit_map"))
-        self._ref_fit_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
-        self._ref_fit_btn.setMinimumWidth(70)
-        scale_row.addWidget(self._ref_fit_btn)
-        ref_card.layout().addLayout(scale_row)
+        # 自定义参考图: 同样一套
+        (self._ref_opacity_slider, self._ref_opacity_label,
+         self._ref_toggle) = self._add_ref_group(
+            ref_card, tr("land_section_custom_ref"), opacity=40)
+        (self._ref_scale_slider, self._ref_scale_label,
+         self._ref_fit_btn) = self._add_scale_row(ref_card)
 
-        self._ref_scale_slider = QSlider(Qt.Orientation.Horizontal)
-        self._ref_scale_slider.setRange(10, 500)
-        self._ref_scale_slider.setValue(100)
-        self._ref_scale_slider.setStyleSheet(_SLIDER_STYLE)
-        self._ref_scale_slider.valueChanged.connect(
-            lambda v: self._ref_scale_label.setText(f"{v}%")
-        )
-        ref_card.layout().addWidget(self._ref_scale_slider)
+        # 调整参考图位置（开关 + 调整对象单选）
+        self._ref_adjust_btn = QPushButton(tr("land_btn_ref_adjust"))
+        self._ref_adjust_btn.setCheckable(True)
+        self._ref_adjust_btn.setStyleSheet(_ADJUST_BTN_STYLE)
+        self._ref_adjust_btn.toggled.connect(self._on_adjust_toggled)
+        ref_card.layout().addWidget(self._ref_adjust_btn)
 
+        target_row = QHBoxLayout()
+        target_row.setSpacing(10)
+        t_lbl = QLabel(tr("land_label_adjust_target"))
+        t_lbl.setStyleSheet(_DIM_LABEL_STYLE)
+        target_row.addWidget(t_lbl)
+        self._adjust_custom_radio = QRadioButton(tr("land_adjust_custom"))
+        self._adjust_custom_radio.setChecked(True)
+        self._adjust_vanilla_radio = QRadioButton(tr("land_adjust_vanilla"))
+        self._adjust_target_group = QButtonGroup(self)
+        for r in (self._adjust_custom_radio, self._adjust_vanilla_radio):
+            self._adjust_target_group.addButton(r)
+            r.setEnabled(False)          # 平时置灰, 进入调整模式才可用
+            target_row.addWidget(r)
+        target_row.addStretch()
+        self._adjust_custom_radio.toggled.connect(
+            lambda on: on and self.ref_adjust_target_changed.emit("custom"))
+        self._adjust_vanilla_radio.toggled.connect(
+            lambda on: on and self.ref_adjust_target_changed.emit("vanilla"))
+        ref_card.layout().addLayout(target_row)
+
+        ref_card.layout().addWidget(_make_hint(tr("land_ref_adjust_hint")))
         lay.addWidget(ref_card)
 
         # ══ ② 绘制陆地与海洋 — 类型 / 工具 / 画笔 / 修海岸 ══
@@ -319,6 +299,93 @@ class LandPage(QWidget):
         lay.addWidget(gen_card)
 
         lay.addStretch()
+
+    # ── 参考底图卡片 helper ──
+    def _add_ref_group(self, card, title: str, opacity: int):
+        """一组参考图控制的头两行: 标题+隐藏钮 / 透明度滑条。"""
+        head = QHBoxLayout()
+        head.setSpacing(4)
+        lbl = QLabel(title)
+        lbl.setStyleSheet(_LABEL_STYLE)
+        head.addWidget(lbl)
+        head.addStretch()
+        toggle = QPushButton(tr("land_btn_hide"))
+        toggle.setCheckable(True)
+        toggle.setStyleSheet(_SECONDARY_BTN_STYLE)
+        toggle.setMinimumWidth(50)
+        toggle.toggled.connect(
+            lambda on, b=toggle: b.setText(
+                tr("land_btn_show") if on else tr("land_btn_hide")))
+        head.addWidget(toggle)
+        card.layout().addLayout(head)
+
+        row = QHBoxLayout()
+        row.setSpacing(4)
+        cap = QLabel(tr("land_label_opacity"))
+        cap.setStyleSheet(_DIM_LABEL_STYLE)
+        row.addWidget(cap)
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(0, 100)
+        slider.setValue(opacity)
+        slider.setStyleSheet(_SLIDER_STYLE)
+        val = QLabel(f"{opacity}%")
+        val.setStyleSheet(_DIM_LABEL_STYLE)
+        val.setFixedWidth(36)
+        slider.valueChanged.connect(lambda v, l=val: l.setText(f"{v}%"))
+        row.addWidget(slider)
+        row.addWidget(val)
+        card.layout().addLayout(row)
+        return slider, val, toggle
+
+    def _add_scale_row(self, card):
+        """一行缩放控制: 缩放滑条 + % + 铺满按钮。"""
+        row = QHBoxLayout()
+        row.setSpacing(4)
+        cap = QLabel(tr("land_label_scale"))
+        cap.setStyleSheet(_DIM_LABEL_STYLE)
+        row.addWidget(cap)
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(10, 500)
+        slider.setValue(100)
+        slider.setStyleSheet(_SLIDER_STYLE)
+        val = QLabel("100%")
+        val.setStyleSheet(_DIM_LABEL_STYLE)
+        val.setFixedWidth(36)
+        slider.valueChanged.connect(lambda v, l=val: l.setText(f"{v}%"))
+        fit = QPushButton(tr("land_btn_fit"))
+        fit.setStyleSheet(_SECONDARY_BTN_STYLE)
+        fit.setMinimumWidth(50)
+        row.addWidget(slider)
+        row.addWidget(val)
+        row.addWidget(fit)
+        card.layout().addLayout(row)
+        return slider, val, fit
+
+    def _on_adjust_toggled(self, on: bool) -> None:
+        self._ref_adjust_btn.setText(
+            tr("land_btn_ref_adjust_active") if on else tr("land_btn_ref_adjust"))
+        self._adjust_custom_radio.setEnabled(on)
+        self._adjust_vanilla_radio.setEnabled(on)
+        self.ref_adjust_toggled.emit(on)
+
+    def current_adjust_target(self) -> str:
+        """当前调整对象: "vanilla" / "custom"。"""
+        return "vanilla" if self._adjust_vanilla_radio.isChecked() else "custom"
+
+    def set_ref_adjust_checked(self, on: bool) -> None:
+        """外部（画布 ESC 退出）同步按钮勾选状态。"""
+        self._ref_adjust_btn.setChecked(on)
+
+    def set_ref_scale_percent(self, target: str, percent: int) -> None:
+        """画布滚轮缩放后回写滑条（blockSignals 防止再触发缩放回环）。"""
+        slider = (self._vanilla_ref_scale_slider if target == "vanilla"
+                  else self._ref_scale_slider)
+        label = (self._vanilla_ref_scale_label if target == "vanilla"
+                 else self._ref_scale_label)
+        slider.blockSignals(True)
+        slider.setValue(percent)
+        slider.blockSignals(False)
+        label.setText(f"{percent}%")
 
     # ── 槽函数 ──
     def _on_land_brush(self, size: int) -> None:
