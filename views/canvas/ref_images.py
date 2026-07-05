@@ -130,12 +130,12 @@ class RefImageMixin:
         self._ref_adjust_target = target
         if target is None:
             self._ref_adjust_border.setVisible(False)
-            self.setCursor(Qt.CrossCursor if self._current_tool != "pan"
-                           else Qt.OpenHandCursor)
+            self.setCursor(Qt.CursorShape.CrossCursor if self._current_tool != "pan"
+                           else Qt.CursorShape.OpenHandCursor)
         else:
             self._update_ref_adjust_border()
             self._ref_adjust_border.setVisible(True)
-            self.setCursor(Qt.SizeAllCursor)
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
 
     def _update_ref_adjust_border(self) -> None:
         """虚线框贴住当前被调整的参考图。"""

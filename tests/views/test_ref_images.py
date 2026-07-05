@@ -141,3 +141,18 @@ def test_wheel_scales_adjust_target(canvas, tmp_path):
     assert got == [("vanilla", pytest.approx(1.1))]
     # 自定义图不动
     assert canvas._ref_layers["custom"].scale == 1.0
+
+
+def test_adjust_mode_blocks_double_click(canvas, tmp_path):
+    canvas.load_ref_layer("custom", _make_png(tmp_path))
+    canvas._province_map[50, 50] = 5
+    fired = []
+    canvas.province_double_clicked.connect(fired.append)
+    canvas.set_ref_adjust_mode("custom")
+    dbl = QMouseEvent(QEvent.MouseButtonDblClick, QPointF(50, 50),
+                      Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+    canvas.mouseDoubleClickEvent(dbl)
+    assert fired == []                       # 调整模式下不触发
+    canvas.set_ref_adjust_mode(None)
+    canvas.mouseDoubleClickEvent(dbl)
+    assert fired == [5]                      # 退出后恢复

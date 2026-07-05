@@ -623,6 +623,10 @@ class InputMixin:
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         """双击省份 → 设置 VP（所有模式，但不触发画笔）"""
         if event.button() == Qt.MouseButton.LeftButton:
+            # 调整参考图模式: 双击不触发省份 VP 设置
+            if self._ref_adjust_target is not None:
+                event.accept()
+                return
             # 阻止双击触发画笔
             self._is_drawing = False
             self._last_draw_pos = None
@@ -637,6 +641,10 @@ class InputMixin:
 
     def contextMenuEvent(self, event) -> None:
         """右键省份 → 弹出上下文菜单（所有模式）"""
+        # 调整参考图模式: 不弹省份右键菜单
+        if self._ref_adjust_target is not None:
+            event.accept()
+            return
         pos = self.mapToScene(event.pos())
         sx, sy = int(pos.x()), int(pos.y())
         if 0 <= sx < self.map_w and 0 <= sy < self.map_h:
