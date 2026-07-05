@@ -259,6 +259,9 @@ class ToolPanel(QWidget):
     validate_requested = pyqtSignal()
     smooth_coast_requested = pyqtSignal()
     import_ref_requested = pyqtSignal()
+    open_vanilla_requested = pyqtSignal()
+    ref_adjust_toggled = pyqtSignal(bool)
+    ref_adjust_target_changed = pyqtSignal(str)
     clear_new_land_mask_requested = pyqtSignal()
 
     # 密度模式信号
@@ -516,6 +519,9 @@ class ToolPanel(QWidget):
         p.smooth_coast_requested.connect(self.smooth_coast_requested)
         p.clear_new_land_mask_requested.connect(self.clear_new_land_mask_requested)
         p.import_ref_requested.connect(self.import_ref_requested)
+        p.open_vanilla_requested.connect(self.open_vanilla_requested)
+        p.ref_adjust_toggled.connect(self.ref_adjust_toggled)
+        p.ref_adjust_target_changed.connect(self.ref_adjust_target_changed)
 
     def _connect_density_signals(self) -> None:
         p = self._density_page
@@ -671,6 +677,24 @@ class ToolPanel(QWidget):
     @property
     def _ref_toggle(self) -> QPushButton:
         return self._land_page._ref_toggle
+
+    @property
+    def _vanilla_ref_scale_slider(self) -> QSlider:
+        return self._land_page._vanilla_ref_scale_slider
+
+    @property
+    def _vanilla_ref_fit_btn(self) -> QPushButton:
+        return self._land_page._vanilla_ref_fit_btn
+
+    # 调整参考图模式 — 委托 land page
+    def current_adjust_target(self) -> str:
+        return self._land_page.current_adjust_target()
+
+    def set_ref_adjust_checked(self, on: bool) -> None:
+        self._land_page.set_ref_adjust_checked(on)
+
+    def set_ref_scale_percent(self, target: str, percent: int) -> None:
+        self._land_page.set_ref_scale_percent(target, percent)
 
     # 快速创建颜色 — 外部读取
     @property
