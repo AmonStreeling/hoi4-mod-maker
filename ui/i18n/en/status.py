@@ -41,7 +41,6 @@ STRINGS: dict[str, str] = {
     "status_pterrain_view": "Attribute terrain: view mode (enable 'Assign Mode' to edit)",
     "status_pterrain_view_on": "👁 View mode: click province to see info",
     "status_ready": "Ready",
-    "status_regen_mode": "Incremental regen: click provinces to select area, then click Regenerate",
     "status_ridge_applied": "Mountain ridge applied",
     "status_ridge_mode_off": "Ridge drawing mode off",
     "status_ridge_mode_on": "Ridge mode: drag on map to draw mountains",

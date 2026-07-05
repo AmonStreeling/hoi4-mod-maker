@@ -1,6 +1,6 @@
 """ProvinceController — 省份编辑模式控制器。
 
-处理省份合并、扩张、切割、增量生成操作。
+处理省份合并、扩张、切割操作。
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class ProvinceController(BaseController):
-    """省份编辑模式：合并/扩张/切割/增量生成。"""
+    """省份编辑模式：合并/扩张/切割。"""
 
     def __init__(self, project: "Project", command_history: "CommandHistory") -> None:
         super().__init__(project, command_history)
@@ -26,9 +26,6 @@ class ProvinceController(BaseController):
         self.merge_first_pid: int = 0
         self.expand_mode: bool = False
         self.selected_province_id: int = 0
-        # 增量生成：选中的省份集合
-        self.regen_selected_pids: set[int] = set()
-        self.regen_mode: bool = False
 
     def activate(self) -> None:
         """进入省份模式。"""
@@ -238,98 +235,3 @@ class ProvinceController(BaseController):
             self._emit_render(full=True)
 
             # 不退出合并模式，重置等待下一对
-            self.merge_first_pid = 0
-
-    # ── 增量生成 ──
-
-    def set_regen_mode(self, on: bool) -> None:
-        """开关增量生成选区模式。"""
-        self.regen_mode = on
-        if on:
-            self.merge_mode = False
-            self.expand_mode = False
-            self.regen_selected_pids.clear()
-            self._emit_status('增量生成：点击省份选择区域（Ctrl+点击多选），选好后点「生成」')
-        else:
-            self.regen_selected_pids.clear()
-            self._emit_status("回到查看模式")
-
-    def toggle_regen_province(self, pid: int) -> None:
-        """增量生成模式下切换省份选中状态。"""
-        if pid <= 0:
-            return
-        if pid in self.regen_selected_pids:
-            self.regen_selected_pids.discard(pid)
-        else:
-            self.regen_selected_pids.add(pid)
-        n = len(self.regen_selected_pids)
-        self._emit_status(f'已选中 {n} 个省份，点「生成」重新生成这些区域的省份')
-        self._emit_render(full=True)
-
-    def execute_regen(
-        self, density: float | None = None, lloyd_iterations: int = 2
-    ) -> tuple[int, int]:
-        """执行增量生成。返回 (删除的省份数, 新建的省份数)。"""
-        if not self.regen_selected_pids:
-            self._emit_status("请先选择要重新生成的省份")
-            return 0, 0
-
-        map_data = self.project.map_data
-        province_map = map_data.province_map
-        tile_map = map_data.tile_map
-
-        # 构建选区 mask：选中省份覆盖的所有像素
-        region_mask = np.zeros_like(province_map, dtype=bool)
-        for pid in self.regen_selected_pids:
-            region_mask |= (province_map == pid)
-
-        from domain.generators.province import generate_provinces_in_region
-        removed, new_ids = generate_provinces_in_region(
-            province_map, tile_map, region_mask,
-            target_density=density,
-            lloyd_iterations=lloyd_iterations,
-            state_mgr=self.project.state_mgr,
-            strategic_region_mgr=self.project.strategic_region_mgr,
-            country_mgr=self.project.country_mgr,
-        )
-
-        self.project.mark_dirty()
-        self.regen_selected_pids.clear()
-        self.regen_mode = False
-        self._emit_status(f"增量生成完成：删除 {len(removed)} 个旧省份，新建 {len(new_ids)} 个省份")
-        self._emit_render(full=True)
-        self.event_bus.emit("province_count_changed", count=int(province_map.max()))
-        return len(removed), len(new_ids)
-
-    def regen_in_rect(
-        self, y1: int, x1: int, y2: int, x2: int,
-        density: float | None = None, lloyd_iterations: int = 2
-    ) -> tuple[int, int]:
-        """在矩形区域内重新生成省份。"""
-        map_data = self.project.map_data
-        province_map = map_data.province_map
-        tile_map = map_data.tile_map
-        H, W = province_map.shape
-
-        # 裁剪到地图范围
-        y1, y2 = max(0, min(y1, y2)), min(H, max(y1, y2))
-        x1, x2 = max(0, min(x1, x2)), min(W, max(x1, x2))
-
-        region_mask = np.zeros((H, W), dtype=bool)
-        region_mask[y1:y2, x1:x2] = True
-
-        from domain.generators.province import generate_provinces_in_region
-        removed, new_ids = generate_provinces_in_region(
-            province_map, tile_map, region_mask,
-            target_density=density,
-            lloyd_iterations=lloyd_iterations,
-            state_mgr=self.project.state_mgr,
-            strategic_region_mgr=self.project.strategic_region_mgr,
-            country_mgr=self.project.country_mgr,
-        )
-
-        self.project.mark_dirty()
-        self._emit_status(f"矩形区域增量生成：删除 {len(removed)} 个，新建 {len(new_ids)} 个")
-        self._emit_render(full=True)
-        self.event_bus.emit("province_count_changed", count=int(province_map.max()))
-        return len(removed), len(new_ids)

@@ -136,7 +136,7 @@ def tr(key: str, *args: object, **kwargs: object) -> str:
     """
     获取翻译文本，支持 str.format 位置参数和命名参数。
     例：tr("status_pos", 100, 200)             -> "位置: (100, 200)"
-        tr("dlg_regen_done", removed=5, ...)   -> "删除 5 个 ..."
+        tr("dlg_batch_state_done", sid=5, n=3) -> "已创建州 5（3 个省份）"
 
     缺失时按 _current_lang -> en -> zh -> key 顺序 fallback。
     placeholder 不匹配时 logger.warning 不再静默吞 (历史上的 silent KeyError 坑).

@@ -64,11 +64,11 @@ def test_tr_positional_args(i18n):
 def test_tr_named_kwargs(i18n):
     """tr() 支持命名 placeholder (修复后新功能)."""
     i18n.set_language("en")
-    # dlg_regen_done: "Deleted {removed} old provinces, created {created} new..."
-    result = i18n.tr("dlg_regen_done", removed=5, created=12)
+    # dlg_batch_state_done: "Created state {sid} ({n} provinces)"
+    result = i18n.tr("dlg_batch_state_done", sid=5, n=12)
     assert "5" in result and "12" in result
     # 应该不是未替换的模板
-    assert "{removed}" not in result and "{created}" not in result
+    assert "{sid}" not in result and "{n}" not in result
 
 
 def test_tr_missing_key_returns_key(i18n):
@@ -95,12 +95,12 @@ def test_tr_placeholder_mismatch_logs_warning(i18n, caplog):
     import logging
     i18n.set_language("en")
     with caplog.at_level(logging.WARNING, logger="ui.i18n"):
-        # dlg_regen_done 模板用 {removed} {created} 命名 placeholder
+        # dlg_batch_state_done 模板用 {sid} {n} 命名 placeholder
         # 用位置参数传 → KeyError → 应 warning
-        result = i18n.tr("dlg_regen_done", 5, 12)
+        result = i18n.tr("dlg_batch_state_done", 5, 12)
     assert "placeholder mismatch" in caplog.text
     # 返回未替换模板而非崩溃
-    assert "{removed}" in result
+    assert "{sid}" in result
 
 
 # ── 工具 e2e 测试 ──

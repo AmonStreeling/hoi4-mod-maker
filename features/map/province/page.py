@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
 from ui.styles import (
     make_section as _make_section,
     _DIM, _ACCENT, _BORDER, _SECTION_STYLE, _LABEL_STYLE, _DIM_LABEL_STYLE,
-    _PRIMARY_BTN_STYLE, _SECONDARY_BTN_STYLE, _LINEEDIT_STYLE,
+    _SECONDARY_BTN_STYLE, _LINEEDIT_STYLE,
 )
 from ui.i18n import tr
 
@@ -57,8 +57,6 @@ class ProvincePage(QWidget):
     split_mode_toggled = pyqtSignal(bool)
     lasso_province_toggled = pyqtSignal(bool)
     merge_mode_toggled = pyqtSignal(bool)
-    regen_mode_toggled = pyqtSignal(bool)
-    regen_execute_requested = pyqtSignal()
     find_province_requested = pyqtSignal(int)
 
     def __init__(self, parent=None):
@@ -136,37 +134,17 @@ class ProvincePage(QWidget):
         tools_box.layout().addLayout(tools_row)
         lay.addWidget(tools_box)
 
-        # ── 增量生成（横排） ──
-        regen_box = _make_section(tr("province_section_regen"))
-        regen_row = QHBoxLayout()
-
-        self._regen_btn = QPushButton(tr("province_btn_select_area"))
-        self._regen_btn.setCheckable(True)
-        self._regen_btn.setStyleSheet(_SECONDARY_BTN_STYLE)
-        self._regen_btn.setToolTip(tr("province_btn_select_area_tip"))
-        regen_row.addWidget(self._regen_btn)
-
-        self._regen_exec_btn = QPushButton(tr("province_btn_regen_exec"))
-        self._regen_exec_btn.setStyleSheet(_PRIMARY_BTN_STYLE)
-        self._regen_exec_btn.setToolTip(tr("province_btn_regen_exec_tip"))
-        regen_row.addWidget(self._regen_exec_btn)
-
-        regen_box.layout().addLayout(regen_row)
-        lay.addWidget(regen_box)
-
         # ── 信号连接 ──
         self._merge_btn.toggled.connect(self._on_merge_toggled)
         self._expand_btn.toggled.connect(self._on_expand_toggled)
         self._split_btn.toggled.connect(self._on_split_toggled)
-        self._regen_btn.toggled.connect(self._on_regen_toggled)
-        self._regen_exec_btn.clicked.connect(self.regen_execute_requested.emit)
 
         lay.addStretch()
 
     # ── 槽函数 ──
     def _clear_other_modes(self, *keep: QPushButton) -> None:
         """关闭除 keep 之外的所有模式按钮。"""
-        for btn in (self._merge_btn, self._expand_btn, self._split_btn, self._regen_btn):
+        for btn in (self._merge_btn, self._expand_btn, self._split_btn):
             if btn not in keep and btn.isChecked():
                 btn.setChecked(False)
 
@@ -186,12 +164,6 @@ class ProvincePage(QWidget):
         if on:
             self._clear_other_modes(self._split_btn)
         self.split_mode_toggled.emit(on)
-        self._update_mode_visuals()
-
-    def _on_regen_toggled(self, on: bool) -> None:
-        if on:
-            self._clear_other_modes(self._regen_btn)
-        self.regen_mode_toggled.emit(on)
         self._update_mode_visuals()
 
     def _on_find_clicked(self) -> None:
@@ -219,14 +191,12 @@ class ProvincePage(QWidget):
         merging = self._merge_btn.isChecked()
         expanding = self._expand_btn.isChecked()
         splitting = self._split_btn.isChecked()
-        regening = self._regen_btn.isChecked()
 
         # 按钮样式：激活时变橙色
         for btn, active in [
             (self._merge_btn, merging),
             (self._expand_btn, expanding),
             (self._split_btn, splitting),
-            (self._regen_btn, regening),
         ]:
             btn.setStyleSheet(_ACTIVE_MODE_BTN_STYLE if active else _SECONDARY_BTN_STYLE)
 
@@ -239,9 +209,6 @@ class ProvincePage(QWidget):
             self._province_hint.setStyleSheet(_ACTIVE_HINT_STYLE)
         elif splitting:
             self._province_hint.setText(tr("province_hint_split"))
-            self._province_hint.setStyleSheet(_ACTIVE_HINT_STYLE)
-        elif regening:
-            self._province_hint.setText(tr("province_hint_regen"))
             self._province_hint.setStyleSheet(_ACTIVE_HINT_STYLE)
         else:
             self._province_hint.setText(tr("province_hint_default"))

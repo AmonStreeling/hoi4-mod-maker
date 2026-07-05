@@ -412,8 +412,6 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.split_mode_toggled.connect(self._on_split_toggled)
         tp.lasso_province_toggled.connect(self._on_lasso_toggled)
         tp.merge_mode_toggled.connect(self._on_merge_toggled)
-        tp.regen_mode_toggled.connect(self._on_regen_mode_toggled)
-        tp.regen_execute_requested.connect(self._on_regen_execute)
         tp.find_province_requested.connect(self._on_find_province)
         cv.split_line_drawn.connect(self._on_split_line_drawn)
 
@@ -651,13 +649,6 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         if pid <= 0:
             return
 
-        # 增量生成选区模式
-        ctrl_prov: ProvinceController = self._controllers["province"]
-        if ctrl_prov.regen_mode:
-            ctrl_prov.toggle_regen_province(pid)
-            self._status_info.setText(tr("status_selected_provinces").format(n=len(ctrl_prov.regen_selected_pids)))
-            return
-
         # 批量建州模式
         if self._batch_state_mode:
             if pid in self._batch_state_pids:
@@ -778,14 +769,6 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
             self._canvas.set_framework_tool(None)
             self._status_info.setText(tr("status_view_mode"))
 
-    def _on_regen_mode_toggled(self, on: bool) -> None:
-        ctrl: ProvinceController = self._controllers["province"]
-        ctrl.set_regen_mode(on)
-        if on:
-            self._status_info.setText(tr("status_regen_mode"))
-        else:
-            self._status_info.setText(tr("status_view_mode"))
-
     def _on_find_province(self, pid: int) -> None:
         """省份查找：跳转 + 高亮 + 同步信息条。"""
         import numpy as np
@@ -811,67 +794,6 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         if pctrl is not None and hasattr(pctrl, "on_province_clicked"):
             pctrl.on_province_clicked(pid)
         self._status_info.setText(tr("status_province_located").format(pid=pid))
-
-    def _on_regen_execute(self) -> None:
-        """局部重新生成选中省份。可撤销 (Ctrl+Z) — 复合命令同时还原 province_map + 3 个 manager。"""
-        from commands.land.brush_stroke import BrushStrokeCommand
-        from commands.map.manager_snapshot import ManagerSnapshotCommand
-        from commands.composite import CompositeCommand
-        ctrl: ProvinceController = self._controllers["province"]
-        if not ctrl.regen_selected_pids:
-            QMessageBox.warning(self, tr("dlg_regen_title"), tr("dlg_regen_select_first"))
-            return
-        n = len(ctrl.regen_selected_pids)
-        reply = QMessageBox.question(
-            self, tr("dlg_regen_title"),
-            tr("dlg_regen_confirm").format(n=n),
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        # 撤销快照 before — province_map + 三个 manager（execute_regen 内部会改它们）
-        snap_arrays = {"province_map": self._project.map_data.province_map}
-        before = BrushStrokeCommand.snapshot_arrays(snap_arrays)
-        state_mgr = self._project.state_mgr
-        sr_mgr = self._project.strategic_region_mgr
-        country_mgr = self._project.country_mgr
-        state_cmd = ManagerSnapshotCommand(
-            "局部重生 state", state_mgr,
-            [f for f in ("_states", "_next_id") if hasattr(state_mgr, f)],
-        )
-        sr_cmd = ManagerSnapshotCommand(
-            "局部重生 sr", sr_mgr,
-            [f for f in ("_regions", "_next_id") if hasattr(sr_mgr, f)],
-        )
-        country_cmd = ManagerSnapshotCommand(
-            "局部重生 country", country_mgr,
-            [f for f in ("_state_owner", "_countries") if hasattr(country_mgr, f)],
-        )
-
-        removed, created = ctrl.execute_regen()
-
-        # 入栈 — 即便 province_map 没变也要 push（manager 可能改了）
-        array_cmd = None
-        if BrushStrokeCommand.has_changes(before, snap_arrays):
-            after = BrushStrokeCommand.snapshot_arrays(snap_arrays)
-            array_cmd = BrushStrokeCommand("局部重生 province_map", before, after)
-            array_cmd.set_target_arrays(self._app._get_all_arrays())
-        state_cmd.capture_after()
-        sr_cmd.capture_after()
-        country_cmd.capture_after()
-
-        children = [c for c in (array_cmd, state_cmd, sr_cmd, country_cmd) if c is not None]
-        if children:
-            composite = CompositeCommand(children, "局部重新生成")
-            self._cmd_history._undo_stack.append(composite)
-            self._cmd_history._redo_stack.clear()
-            self._cmd_history._notify()
-
-        self._update_province_count()
-        QMessageBox.information(
-            self, tr("dlg_regen_done_title"),
-            tr("dlg_regen_done").format(removed=removed, created=created),
-        )
 
     # ═══════════════════════ 批量建州 ═══════════════════════
 

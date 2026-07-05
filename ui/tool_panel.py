@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QFrame, QStackedWidget, QScrollArea,
     QSizePolicy,
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, QSize, QTimer
 
 from data.constants import BRUSH_DEFAULT
 from ui.i18n import tr
@@ -239,22 +239,6 @@ class _SubModeTabBar(QWidget):
                 break
 
 
-class _CurrentPageStack(QStackedWidget):
-    """sizeHint 只按当前页算的页面栈。
-
-    QStackedWidget 默认 sizeHint 取所有页面的最大值 —— 放进 QScrollArea 后,
-    矮页面也能按最高页面的高度往下滚出大片空白。只按当前页算, 滚到底即封住。
-    """
-
-    def sizeHint(self):
-        w = self.currentWidget()
-        return w.sizeHint() if w is not None else super().sizeHint()
-
-    def minimumSizeHint(self):
-        w = self.currentWidget()
-        return w.minimumSizeHint() if w is not None else super().minimumSizeHint()
-
-
 # ── 主面板 ────────────────────────────────────────────────
 class ToolPanel(QWidget):
     """左侧工具面板 — 7 个导航图标 + 子标签页 + 13 个页面 stack"""
@@ -313,8 +297,6 @@ class ToolPanel(QWidget):
     split_mode_toggled = pyqtSignal(bool)
     lasso_province_toggled = pyqtSignal(bool)
     merge_mode_toggled = pyqtSignal(bool)
-    regen_mode_toggled = pyqtSignal(bool)
-    regen_execute_requested = pyqtSignal()
     find_province_requested = pyqtSignal(int)
 
     # State / Country 信号
@@ -424,12 +406,12 @@ class ToolPanel(QWidget):
         self._page_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._page_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
-        self._stack = _CurrentPageStack()
+        self._stack = QStackedWidget()
         self._stack.setStyleSheet("background: transparent; border: none;")
         self._stack.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        # 切页后重新按当前页高度计算滚动范围
+        # 滚动封底: 切页后按当前页高度重设滚动范围（延迟一帧等布局稳定）
         self._stack.currentChanged.connect(
-            lambda _: self._stack.updateGeometry())
+            lambda _: QTimer.singleShot(0, self._sync_stack_height))
         self._page_scroll.setWidget(self._stack)
         root.addWidget(self._page_scroll, 1)
 
@@ -450,6 +432,23 @@ class ToolPanel(QWidget):
         self._export_btn.setStyleSheet(_SUCCESS_BTN_STYLE)
         self._export_btn.clicked.connect(self.export_requested.emit)
         root.addWidget(self._export_btn)
+
+    def _sync_stack_height(self) -> None:
+        """滚动封底: 栈高度 = max(视口高, 当前页需求高)。
+
+        QStackedWidget 默认按"所有页面里最高的一页"撑大滚动范围, 矮页面
+        能往下滚出大片空白; QScrollArea 的自动 resize 会覆盖普通 resize
+        和 sizeHint 重写, 所以用 setFixedHeight 强制钉住。
+        """
+        cur = self._stack.currentWidget()
+        if cur is None:
+            return
+        h = max(self._page_scroll.viewport().height(), cur.sizeHint().height())
+        self._stack.setFixedHeight(h)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._sync_stack_height()
 
     def _create_pages(self) -> None:
         """实例化各 page 类, 加入 stack, 连接信号转发."""
@@ -554,8 +553,6 @@ class ToolPanel(QWidget):
         p.split_mode_toggled.connect(self.split_mode_toggled)
         p.lasso_province_toggled.connect(self.lasso_province_toggled)
         p.merge_mode_toggled.connect(self.merge_mode_toggled)
-        p.regen_mode_toggled.connect(self.regen_mode_toggled)
-        p.regen_execute_requested.connect(self.regen_execute_requested)
         p.find_province_requested.connect(self.find_province_requested)
 
     def _connect_terrain_signals(self) -> None:

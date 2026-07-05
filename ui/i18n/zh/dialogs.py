@@ -38,14 +38,6 @@ Language switched. Some UI elements require restart.""",
 """,
     "dlg_quick_init_no_provinces": "请先生成省份",
     "dlg_quick_init_title": "一键初始化",
-    "dlg_regen_confirm": """将对 {n} 个省份所在区域重新生成省份。
-该区域内的旧省份将被删除并重新划分。
-
-继续吗？""",
-    "dlg_regen_done": "删除 {removed} 个旧省份，新建 {created} 个省份。",
-    "dlg_regen_done_title": "增量生成完成",
-    "dlg_regen_select_first": "请先选择要重新生成的省份区域",
-    "dlg_regen_title": "增量生成",
     "dlg_select_mod_dir": "选择 HOI4 MOD 或原版目录",
     "dlg_set_vp_label": """省份 {pid} 的 VP 分值
 (1=小镇, 5=中等, 10=城市, 20=首都):""",

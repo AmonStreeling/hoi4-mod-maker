@@ -37,14 +37,6 @@ Existing state/region/country data will be overwritten. Continue?""",
 """,
     "dlg_quick_init_no_provinces": "Please generate provinces first",
     "dlg_quick_init_title": "Quick Init",
-    "dlg_regen_confirm": """Will regenerate provinces in the area of {n} provinces.
-Old provinces in this area will be deleted and repartitioned.
-
-Continue?""",
-    "dlg_regen_done": "Deleted {removed} old provinces, created {created} new provinces.",
-    "dlg_regen_done_title": "Incremental Regen Complete",
-    "dlg_regen_select_first": "Please select province area to regenerate first",
-    "dlg_regen_title": "Incremental Regen",
     "dlg_select_mod_dir": "Select HOI4 MOD or Vanilla Directory",
     "dlg_set_vp_label": """VP value for province {pid}
 (1=town, 5=medium, 10=city, 20=capital):""",

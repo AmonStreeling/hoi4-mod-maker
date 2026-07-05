@@ -41,7 +41,6 @@ STRINGS: dict[str, str] = {
     "status_pterrain_view": "属性地形：查看模式（勾选「分配模式」才能改）",
     "status_pterrain_view_on": "👁 查看模式：点 province 只看信息",
     "status_ready": "就绪",
-    "status_regen_mode": "增量生成：点击省份选择区域，然后点「重新生成」",
     "status_ridge_applied": "山脉已生成",
     "status_ridge_mode_off": "山脉画线模式已关闭",
     "status_ridge_mode_on": "山脉画线模式：在地图上拖拽画山脉",
