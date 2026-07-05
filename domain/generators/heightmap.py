@@ -136,8 +136,11 @@ def generate_realistic_heightmap(
     # ── 6. 整体轻平滑后把约束拉回 (平滑会蚀掉海岸, 必须二次钳制) ──
     elev = gaussian_filter(elev, 1.2)
     # 抖动: ±0.6 白噪声打散 uint8 量化的整数阶梯, 否则缓坡上会出现
-    # 肉眼可见的"梯田"等高线 (被光影放大)
-    elev += rng.uniform(-0.6, 0.6, elev.shape).astype(np.float32)
+    # 肉眼可见的"梯田"等高线 (被光影放大)。
+    # 只撒陆地 — 海底必须光滑 (撒海上在高度视图里是一片噪点,
+    # 且与保形精修的海底重建结果不一致, 用户实测抓包)
+    dither = rng.uniform(-0.6, 0.6, elev.shape).astype(np.float32)
+    elev[land] += dither[land]
     elev[land] = np.clip(elev[land], LAND_FLOOR, 255.0)
     elev[~land] = np.clip(elev[~land], 0.0, SEA_CEILING)
 

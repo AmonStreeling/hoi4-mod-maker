@@ -86,7 +86,15 @@ class OptionChooserDialog(QDialog):
     @staticmethod
     def choose(parent, title: str,
                options: list[tuple[str, str, str]]) -> str | None:
-        """弹出对话框, 返回选中的 key; 取消返回 None。"""
-        dlg = OptionChooserDialog(parent, title, options)
+        """弹出对话框, 返回选中的 key; 取消返回 None。
+
+        parent 可以传任意控件 (如侧栏页面) — 内部取其顶层窗口做锚点,
+        并显式居中: 直接用侧栏小控件当父级会让对话框弹在奇怪的位置。
+        """
+        anchor = parent.window() if parent is not None else None
+        dlg = OptionChooserDialog(anchor, title, options)
+        dlg.adjustSize()
+        if anchor is not None:
+            dlg.move(anchor.frameGeometry().center() - dlg.rect().center())
         dlg.exec_()
         return dlg.selected

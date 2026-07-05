@@ -54,6 +54,19 @@ def test_mountains_and_plains_coexist():
     assert plains_ratio > 0.35                         # 大片平原
 
 
+def test_sea_floor_is_smooth_no_dither():
+    """海底必须光滑: 抗梯田抖动只撒陆地, 不能把海底弄成一片噪点。
+
+    (用户实测抓包: 从零生成的海洋比保形精修的海底"密度高")
+    直线海岸下, 同一离岸距离的海底像素高度应完全一致。
+    """
+    tile_map = _world()
+    out = generate_realistic_heightmap(tile_map)
+    # x=5 一列, 距左侧直线海岸距离恒定 → 大陆架深度应恒定
+    column = out[80:170, 5].astype(np.int32)
+    assert int(np.ptp(column)) == 0
+
+
 def test_deterministic_by_seed():
     tile_map = _world()
     a = generate_realistic_heightmap(tile_map, HeightmapParams(seed=9))

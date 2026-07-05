@@ -738,13 +738,7 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         from domain.generators.heightmap import (
             RealisticHeightmapGenerator, HeightmapParams)
         from commands.map.apply_generator import ApplyGeneratorCommand
-        ret = QMessageBox.question(
-            self, tr("realistic_height_confirm_title"),
-            tr("realistic_height_confirm_msg"),
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if ret != QMessageBox.Yes:
-            return
+        # 不再二次确认: 入口是选择题对话框, 点卡片即明确意图, 且可撤销
         self._status_info.setText(tr("status_realistic_height"))
         self.repaint()
         from PyQt5.QtWidgets import QApplication
@@ -777,13 +771,7 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         from domain.generators.terrain_detail import (
             TerrainDetailGenerator, TerrainDetailParams)
         from commands.map.generate_terrain import GenerateTerrainCommand
-        ret = QMessageBox.question(
-            self, tr("detail_terrain_confirm_title"),
-            tr("detail_terrain_confirm_msg"),
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if ret != QMessageBox.Yes:
-            return
+        # 不再二次确认: 入口是选择题对话框, 点卡片即明确意图, 且可撤销
         self._status_info.setText(tr("status_detail_terrain"))
         self.repaint()
         from PyQt5.QtWidgets import QApplication
@@ -813,13 +801,7 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         from domain.generators.terrain_beautify import (
             TerrainBeautifyGenerator, TerrainBeautifyParams)
         from commands.map.generate_terrain import GenerateTerrainCommand
-        ret = QMessageBox.question(
-            self, tr("beautify_terrain_confirm_title"),
-            tr("beautify_terrain_confirm_msg"),
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if ret != QMessageBox.Yes:
-            return
+        # 不再二次确认: 入口是选择题对话框, 点卡片即明确意图, 且可撤销
         self._status_info.setText(tr("status_beautify_terrain"))
         self.repaint()
         from PyQt5.QtWidgets import QApplication
