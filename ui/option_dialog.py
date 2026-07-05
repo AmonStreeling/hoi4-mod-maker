@@ -14,29 +14,63 @@ OptionChooserDialog — "说人话的选择题"对话框。
 
 from __future__ import annotations
 
+from typing import Callable
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QPushButton,
+    QDialog, QVBoxLayout, QLabel, QPushButton, QFrame,
 )
 
 from ui.i18n import tr
 from ui.styles import _BORDER, _TEXT, _DIM, _ACCENT, _INPUT_BG
 
-
+# 卡片用 QFrame 而不是 QPushButton: QPushButton 的高度不会跟随内部
+# 换行文字长高（文字被裁掉）, QFrame + 布局能正确按内容计算高度。
 _CARD_STYLE = f"""
-    QPushButton {{
+    QFrame#optionCard {{
         background: {_INPUT_BG};
         border: 1px solid {_BORDER};
         border-radius: 6px;
-        padding: 12px 14px;
-        text-align: left;
-        color: {_TEXT};
     }}
-    QPushButton:hover {{
-        border-color: {_ACCENT};
+    QFrame#optionCard:hover {{
+        border: 1px solid {_ACCENT};
         background: rgba(79, 140, 255, 0.12);
     }}
 """
+
+
+class _OptionCard(QFrame):
+    """一张可点击的选项卡片: 标题 + 换行说明。"""
+
+    def __init__(self, key: str, name: str, desc: str,
+                 on_pick: Callable[[str], None]) -> None:
+        super().__init__()
+        self._key = key
+        self._on_pick = on_pick
+        self.setObjectName("optionCard")
+        self.setStyleSheet(_CARD_STYLE)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        v = QVBoxLayout(self)
+        v.setContentsMargins(14, 10, 14, 10)
+        v.setSpacing(4)
+
+        name_lbl = QLabel(name)
+        name_lbl.setStyleSheet(
+            f"background: transparent; color: {_TEXT};"
+            " font-size: 14px; font-weight: 700;")
+        v.addWidget(name_lbl)
+
+        desc_lbl = QLabel(desc)
+        desc_lbl.setWordWrap(True)
+        desc_lbl.setStyleSheet(
+            f"background: transparent; color: {_DIM}; font-size: 12px;")
+        v.addWidget(desc_lbl)
+
+    def mouseReleaseEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._on_pick(self._key)
+        super().mouseReleaseEvent(event)
 
 
 class OptionChooserDialog(QDialog):
@@ -47,37 +81,27 @@ class OptionChooserDialog(QDialog):
         super().__init__(parent)
         self.selected: str | None = None
         self.setWindowTitle(title)
-        self.setMinimumWidth(440)
+        # 固定宽度: 说明文字在已知宽度下换行, 高度才能算对
+        self.setFixedWidth(460)
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(16, 16, 16, 16)
         lay.setSpacing(10)
 
         for key, name, desc in options:
-            btn = QPushButton()
-            btn.setStyleSheet(_CARD_STYLE)
-            btn.setMinimumHeight(64)
-            # 富文本布局: 标题一行 + 说明一行 (说明用暗色小字)
-            inner = QVBoxLayout(btn)
-            inner.setContentsMargins(12, 8, 12, 8)
-            inner.setSpacing(3)
-            name_lbl = QLabel(f"<b>{name}</b>")
-            name_lbl.setStyleSheet("background: transparent; font-size: 14px;")
-            name_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-            desc_lbl = QLabel(desc)
-            desc_lbl.setWordWrap(True)
-            desc_lbl.setStyleSheet(
-                f"background: transparent; color: {_DIM}; font-size: 12px;")
-            desc_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-            inner.addWidget(name_lbl)
-            inner.addWidget(desc_lbl)
-            btn.clicked.connect(
-                lambda _checked=False, k=key: self._pick(k))
-            lay.addWidget(btn)
+            lay.addWidget(_OptionCard(key, name, desc, self._pick))
 
         cancel = QPushButton(tr("btn_cancel"))
         cancel.clicked.connect(self.reject)
         lay.addWidget(cancel, alignment=Qt.AlignmentFlag.AlignRight)
+
+        # 高度钉死为"宽度 460 时的内容高度": 不给布局留可分配的多余空间,
+        # 否则卡片之间会被拉出大空隙; heightForWidth 才能算对换行文字的高度
+        lay.activate()
+        if lay.hasHeightForWidth():
+            self.setFixedHeight(lay.heightForWidth(self.width()))
+        else:
+            self.setFixedHeight(self.sizeHint().height())
 
     def _pick(self, key: str) -> None:
         self.selected = key
