@@ -11,7 +11,6 @@ STRINGS: dict[str, str] = {
     "smooth_coast_after_gen_msg": "检测到已有省份。\n\n平滑海岸线会让【陆海边界】与【省份边界】错位，导出 MOD 时可能出错。\n\n建议平滑后【重新生成省份】。\n\n确定继续？",
     "land_btn_generate_subhint": "💡 已有省份时会弹窗，可选【增量】或【整图重画】",
     "land_btn_clear_density": "清除",
-    "land_btn_fit_map": "铺满地图",
     "land_btn_generate": "生成省份",
     "land_btn_generate_tip": "按上方参数生成省份。\n💡 已有省份时会弹窗询问【增量】或【整图重画】（增量保留旧省份，整图重画清除所有）。",
     "land_btn_hide": "隐藏",

@@ -11,7 +11,6 @@ STRINGS: dict[str, str] = {
     "smooth_coast_after_gen_msg": "Provinces already exist.\n\nSmoothing the coastline will misalign the [land/sea border] with the [province border], which may break MOD export.\n\nRecommended: [Regenerate Provinces] after smoothing.\n\nContinue anyway?",
     "land_btn_generate_subhint": "💡 If provinces exist, a dialog asks for [Incremental] or [Regenerate All]",
     "land_btn_clear_density": "Clear",
-    "land_btn_fit_map": "Fit to Map",
     "land_btn_generate": "Generate Provinces",
     "land_btn_generate_tip": "Generate provinces using the parameters above.\n💡 If provinces already exist, a dialog asks whether to [Incremental] (keep old) or [Regenerate All] (wipe everything).",
     "land_btn_hide": "Hide",

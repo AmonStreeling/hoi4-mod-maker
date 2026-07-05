@@ -143,6 +143,35 @@ def test_wheel_scales_adjust_target(canvas, tmp_path):
     assert canvas._ref_layers["custom"].scale == 1.0
 
 
+def test_esc_during_drag_stops_dragging(canvas, tmp_path):
+    """拖拽中途 ESC: _ref_dragging 必须复位, 不得 fallback 错拖自定义图。"""
+    canvas.load_ref_layer("vanilla", _make_png(tmp_path))
+    canvas.load_ref_layer("custom", _make_png(tmp_path))
+    canvas.set_ref_adjust_mode("vanilla")
+    canvas.mousePressEvent(_left_press())
+    assert canvas._ref_dragging is True
+    esc = QKeyEvent(QEvent.KeyPress, Qt.Key_Escape, Qt.NoModifier)
+    canvas.keyPressEvent(esc)
+    assert canvas._ref_adjust_target is None
+    assert canvas._ref_dragging is False
+    # 后续鼠标移动不得移动任何参考图
+    pos_before = canvas._ref_layers["custom"].item.pos()
+    move = QMouseEvent(QEvent.MouseMove, QPointF(80, 80),
+                       Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+    canvas.mouseMoveEvent(move)
+    assert canvas._ref_layers["custom"].item.pos() == pos_before
+
+
+def test_fit_emits_scale_changed(canvas, tmp_path):
+    canvas.load_ref_layer("custom", _make_png(tmp_path))
+    got = []
+    canvas.ref_adjust_scale_changed.connect(lambda t, s: got.append((t, s)))
+    canvas.fit_ref_layer("custom")
+    assert len(got) == 1
+    assert got[0][0] == "custom"
+    assert got[0][1] == pytest.approx(canvas.map_w / 64)
+
+
 def test_adjust_mode_blocks_double_click(canvas, tmp_path):
     canvas.load_ref_layer("custom", _make_png(tmp_path))
     canvas._province_map[50, 50] = 5

@@ -346,10 +346,11 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         # 打开原版参考（复用文件菜单动作）
         tp.open_vanilla_requested.connect(self._on_load_vanilla_ref)
         # 调整参考图模式
-        tp.ref_adjust_toggled.connect(
-            lambda on: cv.set_ref_adjust_mode(
-                tp.current_adjust_target() if on else None)
-        )
+        def _on_ref_adjust_toggled(on: bool) -> None:
+            cv.set_ref_adjust_mode(tp.current_adjust_target() if on else None)
+            if on:
+                cv.setFocus()   # 焦点给画布, 让 ESC 直接可用（刚点完按钮时焦点在按钮上）
+        tp.ref_adjust_toggled.connect(_on_ref_adjust_toggled)
         tp.ref_adjust_target_changed.connect(cv.set_ref_adjust_mode)
         cv.ref_adjust_exited.connect(lambda: tp.set_ref_adjust_checked(False))
         cv.ref_adjust_scale_changed.connect(

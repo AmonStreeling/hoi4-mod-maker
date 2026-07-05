@@ -85,6 +85,8 @@ class RefImageMixin:
         layer.scale = self.map_w / layer.original.width()
         if getattr(self, '_ref_adjust_target', None) == key:
             self._update_ref_adjust_border()
+        # fit 改了 scale, 回写页面滑条（main_window 已接 ref_adjust_scale_changed）
+        self.ref_adjust_scale_changed.emit(key, layer.scale)
 
     def toggle_ref_layer(self, key: str, visible: bool) -> None:
         self._ref_layers[key].item.setVisible(visible)
@@ -132,6 +134,9 @@ class RefImageMixin:
             self._ref_adjust_border.setVisible(False)
             self.setCursor(Qt.CursorShape.CrossCursor if self._current_tool != "pan"
                            else Qt.CursorShape.OpenHandCursor)
+            # 退出调整模式必须清掉拖拽标记：否则 ESC 中断拖拽后 _ref_dragging
+            # 仍是 True，下一次 mouseMoveEvent 会 fallback 到 REF_CUSTOM 错拖自定义图
+            self._ref_dragging = False
         else:
             self._update_ref_adjust_border()
             self._ref_adjust_border.setVisible(True)
