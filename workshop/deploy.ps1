@@ -11,8 +11,10 @@
 # 版本号自动从 ../version.py 的 VERSION 字段读
 $ErrorActionPreference = "Stop"
 
-$MOD_DIR = "D:\Documents\Paradox Interactive\Hearts of Iron IV\mod\hoi4_map_maker"
-$OUTER_MOD = "D:\Documents\Paradox Interactive\Hearts of Iron IV\mod\hoi4_map_maker.mod"
+# 实际上传源是 mod\1 (启动器 Upload Mod 工具创建的编号目录, remote_file_id=3707251866)
+# 注意: mod\hoi4_map_maker 是曾计划的改名, 从未在这台机落地, 别改回去
+$MOD_DIR = "D:\Documents\Paradox Interactive\Hearts of Iron IV\mod\1"
+$OUTER_MOD = "D:\Documents\Paradox Interactive\Hearts of Iron IV\mod\1.mod"
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $REPO_ROOT = Split-Path -Parent $SCRIPT_DIR
 $DIST_DIR = Join-Path $REPO_ROOT "dist\HOI4MapMaker"
@@ -34,10 +36,8 @@ if (-not (Test-Path $MOD_DIR)) {
     Write-Error "MOD_DIR missing: $MOD_DIR`nFirst-time deploy must be manual (create dir + thumbnail.png + outer .mod with remote_file_id from Steam)."
     exit 1
 }
-if (-not (Test-Path $OUTER_MOD)) {
-    Write-Error "OUTER_MOD missing: $OUTER_MOD"
-    exit 1
-}
+# 外层 .mod 在 mod\1 布局下不存在 (启动器直接读目录里的 descriptor.mod), 存在才 patch
+$HAS_OUTER = Test-Path $OUTER_MOD
 if (-not (Test-Path (Join-Path $DIST_DIR "HOI4MapMaker.exe"))) {
     Write-Error "Build missing: $DIST_DIR\HOI4MapMaker.exe`nRun build_exe.bat first."
     exit 1
@@ -61,20 +61,22 @@ $descPath = Join-Path $MOD_DIR "descriptor.mod"
     else { $_ }
 } | Set-Content $descPath -Encoding utf8
 
-Write-Output "[3/4] In-place patch outer .mod (preserve picture / remote_file_id / path)..."
-(Get-Content $OUTER_MOD) | ForEach-Object {
-    if ($_ -match '^version=') { "version=`"$VER`"" }
-    elseif ($_ -match '^supported_version=') { "supported_version=`"$SUP_VER`"" }
-    else { $_ }
-} | Set-Content $OUTER_MOD -Encoding utf8
+if ($HAS_OUTER) {
+    Write-Output "[3/4] In-place patch outer .mod (preserve picture / remote_file_id / path)..."
+    (Get-Content $OUTER_MOD) | ForEach-Object {
+        if ($_ -match '^version=') { "version=`"$VER`"" }
+        elseif ($_ -match '^supported_version=') { "supported_version=`"$SUP_VER`"" }
+        else { $_ }
+    } | Set-Content $OUTER_MOD -Encoding utf8
+} else {
+    Write-Output "[3/4] No outer .mod (mod\1 layout) - skip."
+}
 
 Write-Output "[4/4] Verify Workshop key fields preserved..."
-$outerContent = Get-Content $OUTER_MOD -Raw
-if ($outerContent -notmatch 'remote_file_id="\d+"') {
-    Write-Warning "remote_file_id missing from outer .mod after deploy! Steam Workshop upload will create a new entry."
+$descContent = Get-Content $descPath -Raw
+if ($descContent -notmatch 'remote_file_id="\d+"') {
+    Write-Warning "remote_file_id missing from descriptor.mod after deploy! Steam Workshop upload will create a new entry."
 }
-Write-Output "--- outer .mod after deploy ---"
-Get-Content $OUTER_MOD
 Write-Output "--- descriptor.mod after deploy ---"
 Get-Content $descPath
 
