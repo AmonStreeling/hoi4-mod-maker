@@ -352,6 +352,8 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         cv.ref_adjust_scale_changed.connect(
             lambda t, s: tp.set_ref_scale_percent(t, int(round(s * 100)))
         )
+        # 已生成省份后画陆海 → 弹确认框（直连信号, 画布同步读结果）
+        cv.land_paint_confirm_requested.connect(self._on_land_paint_confirm)
 
         # 操作按钮 → 本窗口处理（含 UI 交互）
         tp.generate_provinces_requested.connect(self._on_generate_provinces)
@@ -364,8 +366,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         # 密度模式信号
         tp.density_value_changed.connect(
             lambda v: setattr(self._canvas, '_density_paint_value', v))
-        tp.density_brush_size_changed.connect(
-            lambda s: setattr(self._canvas, '_density_brush_size', s))
+        tp.density_brush_size_changed.connect(cv.set_density_brush_size)
         tp.density_soft_edge_changed.connect(
             lambda s: setattr(self._canvas, '_density_soft_edge', s / 100.0))
         tp.density_clear_requested.connect(self._on_density_clear)

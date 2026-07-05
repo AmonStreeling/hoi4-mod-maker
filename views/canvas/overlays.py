@@ -396,15 +396,26 @@ class OverlayMixin:
 
     def _update_brush_cursor(self, sx: int, sy: int) -> None:
         """更新画笔预览光标位置和大小。"""
+        self._brush_cursor_pos = (sx, sy)  # 记住位置, 滑块调大小时就地刷新
+        density_on = getattr(self, '_density_overlay_visible', False)
+        terrain_brush_on = (self._display_mode == "terrain"
+                            and self._terrain_brush_mode)
+        height_brush_on = (self._display_mode == "height"
+                           and getattr(self, '_height_brush_mode', 'off') != "off")
         show_brush = (
-            self._current_tool in ("brush", "eraser", "new_land")
-            and self._display_mode in ("land", "river")
-        ) or getattr(self, '_density_overlay_visible', False)
+            (self._current_tool in ("brush", "eraser", "new_land")
+             and self._display_mode in ("land", "river"))
+            or density_on or terrain_brush_on or height_brush_on
+        )
 
         if show_brush:
-            # 密度模式用独立的画笔大小
-            if getattr(self, '_density_overlay_visible', False):
+            # 各画笔模式用各自独立的尺寸
+            if density_on:
                 bs = getattr(self, '_density_brush_size', 30)
+            elif terrain_brush_on:
+                bs = self._terrain_brush_size
+            elif height_brush_on:
+                bs = self._height_brush_size
             else:
                 bs = self._brush_size
             r = bs // 2
@@ -412,6 +423,12 @@ class OverlayMixin:
             self._brush_cursor.setVisible(True)
         else:
             self._brush_cursor.setVisible(False)
+
+    def _refresh_brush_cursor(self) -> None:
+        """画笔大小滑块拖动时就地刷新预览圈, 不必等鼠标移动。"""
+        pos = getattr(self, '_brush_cursor_pos', None)
+        if pos is not None:
+            self._update_brush_cursor(*pos)
 
     # ── 密度叠加层 ──
 

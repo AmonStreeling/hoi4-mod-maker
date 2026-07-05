@@ -296,6 +296,12 @@ class InputMixin:
                     return
 
             if self._current_tool in ("brush", "eraser", "new_land"):
+                # 已生成省份 → 画笔/橡皮先弹确认（边界会错位）。
+                # 扩展陆地不拦: 它就是为已有省份的增量生成流程设计的。
+                if (self._current_tool != "new_land"
+                        and not self._confirm_land_paint()):
+                    event.accept()
+                    return
                 self._is_drawing = True
                 self.stroke_started.emit()
                 sx, sy = self._scene_pos(event)
@@ -304,6 +310,9 @@ class InputMixin:
                 return
 
             if self._current_tool == "fill":
+                if not self._confirm_land_paint():
+                    event.accept()
+                    return
                 self.stroke_started.emit()
                 sx, sy = self._scene_pos(event)
                 self._flood_fill(sx, sy)

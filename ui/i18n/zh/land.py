@@ -7,6 +7,8 @@ land — zh 翻译
 STRINGS: dict[str, str] = {
     "smooth_coast_confirm_title": "平滑海岸线",
     "smooth_coast_confirm_msg": "全图海岸平滑会修改所有海岸线像素，撤销才能恢复。继续？",
+    "land_paint_after_gen_title": "⚠️ 已生成省份后绘制陆海",
+    "land_paint_after_gen_msg": "检测到已有省份。\n\n继续绘制会让【陆海边界】与【省份边界】错位，导出 MOD 时可能出错。\n\n画完后建议【重新生成省份】。\n\n确定继续绘制？（确认后本次不再提示，重新生成省份后会再次提示）",
     "smooth_coast_after_gen_title": "⚠️ 已生成省份后平滑海岸",
     "smooth_coast_after_gen_msg": "检测到已有省份。\n\n平滑海岸线会让【陆海边界】与【省份边界】错位，导出 MOD 时可能出错。\n\n建议平滑后【重新生成省份】。\n\n确定继续？",
     "land_btn_generate_subhint": "💡 已有省份时会弹窗，可选【增量】或【整图重画】",

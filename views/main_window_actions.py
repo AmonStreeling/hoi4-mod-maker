@@ -395,6 +395,20 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         QMessageBox.critical(self, tr("dlg_error"), msg)
         self._status_info.setText(tr("status_ready"))
 
+    def _on_land_paint_confirm(self) -> None:
+        """已生成省份后第一次画陆海 → 弹确认框。
+
+        画布经直连信号同步调用本方法, 返回时结果已写回
+        canvas._land_paint_confirmed, 画布据此决定这一笔画不画。
+        """
+        ret = QMessageBox.warning(
+            self, tr("land_paint_after_gen_title"),
+            tr("land_paint_after_gen_msg"),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if ret == QMessageBox.Yes:
+            self._canvas._land_paint_confirmed = True
+
     def _on_smooth_coast(self) -> None:
         """平滑海岸线。有选区时只平滑选区内，否则全图。可撤销 (Ctrl+Z)。"""
         from domain.generators.coastline import smooth_coastline

@@ -63,6 +63,9 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
     ref_adjust_exited = pyqtSignal()                    # ESC 退出（页面按钮同步取消勾选）
     ref_adjust_scale_changed = pyqtSignal(str, float)   # 滚轮缩放 (target, scale)
 
+    # 已生成省份后画陆海 → 请求 MainWindow 弹确认框（直连信号, 同步返回）
+    land_paint_confirm_requested = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -133,6 +136,7 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._selected_province_id = 0  # 省份模式下选中的省份ID
         self._selected_province_tile = 0  # 选中省份的地块类型（边界编辑时只能影响同类型像素）
         self._has_provinces = False     # 是否有省份数据（避免每笔都扫描整张图）
+        self._land_paint_confirmed = False  # 已生成省份后画陆海, 用户是否已确认过
         self._current_height_value = 120
         self._brush_size = BRUSH_DEFAULT
         self._is_drawing = False
@@ -371,6 +375,7 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._height_map = map_data.height_map
         self._river_map = map_data.river_map
         self._has_provinces = int(self._province_map.max()) > 0
+        self._land_paint_confirmed = False  # 新数据 → 画陆海重新确认
         # 清除所有缓存
         self._border_cache = None
         if hasattr(self, '_border_base_pixmap'):
@@ -476,6 +481,7 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
     def province_map(self, data: np.ndarray) -> None:
         self._set_layer("province_map", data, np.int32)
         self._has_provinces = int(self._province_map.max()) > 0
+        self._land_paint_confirmed = False  # 省份重新生成 → 边界重新对齐, 下次画陆海重新确认
         # 省份数据变了，清除边界缓存以便下次重建
         self._border_cache = None
         if hasattr(self, '_border_base_pixmap'):
@@ -578,6 +584,7 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
 
     def set_brush_size(self, size: int) -> None:
         self._brush_size = max(1, min(100, size))
+        self._refresh_brush_cursor()
 
     def set_terrain_index(self, index: int) -> None:
         self._current_terrain_index = max(0, min(255, index))
@@ -589,6 +596,7 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
     def set_terrain_brush_size(self, size: int) -> None:
         """地形画笔尺寸 (与通用画笔解耦)."""
         self._terrain_brush_size = max(1, min(200, int(size)))
+        self._refresh_brush_cursor()
 
     def set_height_value(self, value: int) -> None:
         self._current_height_value = max(0, min(255, value))
@@ -603,6 +611,24 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
 
     def set_height_brush_size(self, size: int) -> None:
         self._height_brush_size = max(1, min(400, int(size)))
+        self._refresh_brush_cursor()
+
+    def set_density_brush_size(self, size: int) -> None:
+        self._density_brush_size = max(1, min(200, int(size)))
+        self._refresh_brush_cursor()
+
+    def _confirm_land_paint(self) -> bool:
+        """已生成省份时, 画陆海前先让用户确认一次（边界会错位, 需重新生成省份）。
+
+        通过直连信号让 MainWindow 弹模态框, 返回时 _land_paint_confirmed
+        已被写好。确认过一次后本会话不再问; 取消则本笔不画, 下次再问。
+        """
+        if self._display_mode != "land" or self._land_paint_confirmed:
+            return True
+        if not self._has_provinces:
+            return True
+        self.land_paint_confirm_requested.emit()
+        return self._land_paint_confirmed
 
     def set_height_brush_strength(self, strength: int) -> None:
         self._height_brush_strength = max(1, min(50, int(strength)))

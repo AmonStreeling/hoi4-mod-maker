@@ -239,6 +239,22 @@ class _SubModeTabBar(QWidget):
                 break
 
 
+class _CurrentPageStack(QStackedWidget):
+    """sizeHint 只按当前页算的页面栈。
+
+    QStackedWidget 默认 sizeHint 取所有页面的最大值 —— 放进 QScrollArea 后,
+    矮页面也能按最高页面的高度往下滚出大片空白。只按当前页算, 滚到底即封住。
+    """
+
+    def sizeHint(self):
+        w = self.currentWidget()
+        return w.sizeHint() if w is not None else super().sizeHint()
+
+    def minimumSizeHint(self):
+        w = self.currentWidget()
+        return w.minimumSizeHint() if w is not None else super().minimumSizeHint()
+
+
 # ── 主面板 ────────────────────────────────────────────────
 class ToolPanel(QWidget):
     """左侧工具面板 — 7 个导航图标 + 子标签页 + 13 个页面 stack"""
@@ -408,9 +424,12 @@ class ToolPanel(QWidget):
         self._page_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._page_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
-        self._stack = QStackedWidget()
+        self._stack = _CurrentPageStack()
         self._stack.setStyleSheet("background: transparent; border: none;")
         self._stack.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        # 切页后重新按当前页高度计算滚动范围
+        self._stack.currentChanged.connect(
+            lambda _: self._stack.updateGeometry())
         self._page_scroll.setWidget(self._stack)
         root.addWidget(self._page_scroll, 1)
 

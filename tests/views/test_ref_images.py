@@ -188,3 +188,32 @@ def test_adjust_mode_blocks_double_click(canvas, tmp_path):
     canvas.set_ref_adjust_mode(None)
     canvas.mouseDoubleClickEvent(dbl)
     assert fired == [5]                      # 退出后恢复
+
+
+def test_land_paint_blocked_until_confirmed(canvas):
+    """已生成省份: 画笔第一笔先发确认信号, 未确认不画; 确认后放行。"""
+    canvas._province_map[:, :] = 1
+    canvas.province_map = canvas._province_map  # 走 setter 刷 _has_provinces
+    asked = []
+    canvas.land_paint_confirm_requested.connect(lambda: asked.append(1))
+    canvas.mousePressEvent(_left_press())
+    assert asked == [1]
+    assert canvas._is_drawing is False          # 未确认 → 不画
+    # 模拟 MainWindow 弹框里用户点了"是"
+    canvas.land_paint_confirm_requested.connect(
+        lambda: setattr(canvas, '_land_paint_confirmed', True))
+    canvas.mousePressEvent(_left_press())
+    assert canvas._is_drawing is True           # 确认后放行
+    canvas._is_drawing = False
+    canvas.mousePressEvent(_left_press())
+    assert canvas._is_drawing is True           # 本会话不再问
+    assert asked == [1, 1]                      # 第三笔没有再发信号
+
+
+def test_land_paint_no_prompt_without_provinces(canvas):
+    """无省份: 画笔直接画, 不发确认信号。"""
+    asked = []
+    canvas.land_paint_confirm_requested.connect(lambda: asked.append(1))
+    canvas.mousePressEvent(_left_press())
+    assert asked == []
+    assert canvas._is_drawing is True
