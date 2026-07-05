@@ -36,7 +36,7 @@ from domain.managers.river import (
     RIVER_ERASE, VALID_RIVER_VALUES,
 )
 
-from views.canvas.ref_images import RefImageMixin
+from views.canvas.ref_images import RefImageMixin, RefLayer
 from views.canvas.overlays import OverlayMixin, CS_OVERLAY_ALLOWED_MODES
 from views.canvas.input_router import InputMixin
 
@@ -186,6 +186,12 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._ref_pixmap_item.setOpacity(0.4)
         self._ref_pixmap_item.setZValue(2)
         self._scene.addItem(self._ref_pixmap_item)
+
+        # 统一参考图层注册表 (ref_images.py 通用接口)
+        self._ref_layers = {
+            RefImageMixin.REF_VANILLA: RefLayer(self._vanilla_ref_item),
+            RefImageMixin.REF_CUSTOM: RefLayer(self._ref_pixmap_item),
+        }
 
         self._province_pixmap_item = QGraphicsPixmapItem()
         self._province_pixmap_item.setOpacity(0.6)

@@ -638,7 +638,7 @@ class InputMixin:
         if event.modifiers() & Qt.ControlModifier:
             delta = event.angleDelta().y()
             scale_step = 0.1 if delta > 0 else -0.1
-            new_scale = getattr(self, '_ref_scale', 1.0) + scale_step
+            new_scale = self._ref_layers[self.REF_CUSTOM].scale + scale_step
             self.set_ref_scale(new_scale)
             event.accept()
             return
