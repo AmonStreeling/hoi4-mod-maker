@@ -106,6 +106,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         # ── 右键上下文菜单 ──
         self._context_menu = ProvinceContextMenu(
             self._project, self._controllers, self._canvas,
+            open_state_detail=self._on_state_detail_requested,
         )
 
         # 启动时显示欢迎页
@@ -296,6 +297,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         # 预览
         tp.preview_refresh_requested.connect(self._on_preview_refresh)
         tp.preview_game_dir_changed.connect(self._on_preview_game_dir_changed)
+        tp.preview_political_toggled.connect(self._on_preview_political_toggled)
 
         # 工具/画笔 → 画布 (直通)
         tp.tool_changed.connect(cv.set_tool)
@@ -429,6 +431,10 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.state_delete_requested.connect(
             lambda sid: self._controllers["state"].delete_state(sid)
         )
+        tp.state_show_names_toggled.connect(
+            lambda on: cv.set_name_labels_enabled("state", on)
+        )
+        tp.state_resplit_requested.connect(self._on_resplit_state)
 
         # Country 信号 → controller
         tp.create_country_requested.connect(self._on_create_country)
@@ -442,6 +448,9 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.country_color_change_requested.connect(self._on_country_color_change)
         tp.country_delete_requested.connect(
             lambda tag: self._controllers["country"].delete_country(tag)
+        )
+        tp.country_show_names_toggled.connect(
+            lambda on: cv.set_name_labels_enabled("country", on)
         )
 
         # River 信号
@@ -621,6 +630,16 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
                 self._canvas._full_render()
             finally:
                 QApplication.restoreOverrideCursor()
+
+    def _on_preview_political_toggled(self, on: bool) -> None:
+        """预览页"政治视图"开关: 叠加/取消国家势力色。"""
+        self._canvas._preview_political = bool(on)
+        if on:
+            # 预览模式下国家色平时不刷新, 开叠加前拉一次最新数据
+            self._app._refresh_country_colors()
+        self._canvas._preview_political_cache = None
+        if self._canvas.display_mode == "preview":
+            self._canvas._full_render()
 
     def _on_preview_game_dir_changed(self, path: str) -> None:
         """用户选择了游戏目录: 重建资产实例并作废预览缓存。"""
@@ -857,6 +876,44 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
             QMessageBox.information(self, tr("dlg_sr_from_states_title"), tr("dlg_sr_from_states_done").format(rid=new_rid, n=n))
 
     # ═══════════════════════ State 管理 ═══════════════════════
+
+    def _on_resplit_state(self, state_id: int, target_count: int) -> None:
+        """重新分割州内省份: 确认 → 命令执行 (Ctrl+Z 可撤销) → 刷新。"""
+        state = self._project.state_mgr.get_state(state_id)
+        if not state or not state.provinces:
+            return
+        old_pids = set(state.provinces)
+        lines = [
+            tr("resplit_confirm_body").format(
+                sid=state_id, name=state.name,
+                old=len(old_pids), new=target_count),
+        ]
+        if state.victory_points:
+            lines.append(tr("resplit_confirm_vp_warn").format(n=len(state.victory_points)))
+        cap_tags = [
+            tag for tag, c in self._project.country_mgr.countries.items()
+            if c.capital in old_pids
+        ]
+        if cap_tags:
+            lines.append(tr("resplit_confirm_capital_warn").format(tags=", ".join(cap_tags)))
+        reply = QMessageBox.question(
+            self, tr("resplit_confirm_title"), "\n\n".join(lines))
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        from commands.state.resplit import ResplitStateCommand
+        cmd = ResplitStateCommand(
+            self._project.map_data, self._project.state_mgr,
+            state_id, target_count,
+        )
+        self._cmd_history.execute(cmd)
+
+        self._app._refresh_state_list()
+        self._app._refresh_state_colors()
+        self._update_province_count()
+        self._canvas.refresh_display()
+        self._status_info.setText(
+            tr("resplit_done_status").format(sid=state_id, n=len(state.provinces)))
 
     def _on_state_detail_requested(self, state_id: int) -> None:
         state = self._project.state_mgr.get_state(state_id)

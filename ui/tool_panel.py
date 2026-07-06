@@ -292,6 +292,7 @@ class ToolPanel(QWidget):
     export_requested = pyqtSignal()
     preview_refresh_requested = pyqtSignal()
     preview_game_dir_changed = pyqtSignal(str)
+    preview_political_toggled = pyqtSignal(bool)
     split_mode_toggled = pyqtSignal(bool)
     lasso_province_toggled = pyqtSignal(bool)
     merge_mode_toggled = pyqtSignal(bool)
@@ -306,12 +307,15 @@ class ToolPanel(QWidget):
     batch_create_state_confirmed = pyqtSignal()
     state_assign_mode_changed = pyqtSignal(bool)
     state_delete_requested = pyqtSignal(int)
+    state_show_names_toggled = pyqtSignal(bool)
+    state_resplit_requested = pyqtSignal(int, int)
     create_country_requested = pyqtSignal()
     quick_create_country_requested = pyqtSignal(str, str, str)
     country_selected = pyqtSignal(str)
     country_delete_requested = pyqtSignal(str)
     country_property_changed = pyqtSignal(str, str, object)
     country_color_change_requested = pyqtSignal(str)
+    country_show_names_toggled = pyqtSignal(bool)
 
     # 河流信号
     river_type_changed = pyqtSignal(int)
@@ -602,6 +606,8 @@ class ToolPanel(QWidget):
         p.batch_create_state_confirmed.connect(self.batch_create_state_confirmed)
         p.assign_mode_changed.connect(self.state_assign_mode_changed)
         p.state_delete_requested.connect(self.state_delete_requested)
+        p.show_names_toggled.connect(self.state_show_names_toggled)
+        p.resplit_state_requested.connect(self.state_resplit_requested)
 
     def _connect_country_signals(self) -> None:
         p = self._country_page
@@ -611,6 +617,7 @@ class ToolPanel(QWidget):
         p.country_property_changed.connect(self.country_property_changed)
         p.country_color_change_requested.connect(self.country_color_change_requested)
         p.country_delete_requested.connect(self.country_delete_requested)
+        p.show_names_toggled.connect(self.country_show_names_toggled)
 
     def _connect_continent_signals(self) -> None:
         p = self._continent_page
@@ -659,6 +666,7 @@ class ToolPanel(QWidget):
         p = self._preview_page
         p.refresh_requested.connect(self.preview_refresh_requested)
         p.game_dir_changed.connect(self.preview_game_dir_changed)
+        p.political_toggled.connect(self.preview_political_toggled)
 
     # ── 属性 (保持与 MainWindow 的兼容) ──────────────────────
     @property
