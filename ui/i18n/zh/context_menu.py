@@ -8,6 +8,7 @@ STRINGS: dict[str, str] = {
     "context_belongs_country": "所属国家: {}",
     "context_belongs_state": "所属 State: {}",
     "context_copy_province_id": "复制省份ID",
+    "context_edit_state_detail": "编辑州详情（资源 / 建筑）...",
     "context_province_info": "省份 {} 信息",
     "context_set_capital": "设为首都",
     "context_set_terrain": "设置地形",

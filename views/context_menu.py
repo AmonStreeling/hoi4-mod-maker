@@ -27,10 +27,13 @@ class ProvinceContextMenu:
         project: "Project",
         controllers: dict[str, object],
         canvas: "MapCanvas",
+        open_state_detail=None,
     ) -> None:
         self._project = project
         self._controllers = controllers
         self._canvas = canvas
+        # 回调: (state_id) → 打开州详情对话框 (资源/建筑), 由 MainWindow 注入
+        self._open_state_detail = open_state_detail
 
     def show(self, pid: int, screen_pos: QPoint) -> None:
         """在指定屏幕位置弹出菜单。"""
@@ -60,11 +63,13 @@ class ProvinceContextMenu:
         vp_action = None
         capital_action = None
         copy_action = None
+        detail_action = None
 
         if state_id:
             state_info = menu.addAction(tr("context_belongs_state", state_id))
             state_info.setEnabled(False)
 
+            detail_action = menu.addAction(tr("context_edit_state_detail"))
             vp_action = menu.addAction(tr("context_set_vp"))
 
             tag = self._project.country_mgr.get_owner_of_state(state_id)
@@ -85,7 +90,10 @@ class ProvinceContextMenu:
         if chosen is None:
             return
 
-        self._handle_action(chosen, pid, terrain_actions, vp_action, capital_action, copy_action)
+        self._handle_action(
+            chosen, pid, terrain_actions, vp_action, capital_action,
+            copy_action, detail_action, state_id,
+        )
 
     def _handle_action(
         self,
@@ -95,7 +103,15 @@ class ProvinceContextMenu:
         vp_action: object | None,
         capital_action: object | None,
         copy_action: object | None,
+        detail_action: object | None = None,
+        state_id: int = 0,
     ) -> None:
+        # 州详情 (资源/建筑)
+        if action is detail_action and detail_action is not None:
+            if self._open_state_detail is not None and state_id:
+                self._open_state_detail(state_id)
+            return
+
         # 地形
         if action in terrain_actions:
             palette_idx = terrain_actions[action]
