@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QLabel, QComboBox, QLineEdit,
-    QListWidget, QListWidgetItem,
+    QListWidget, QListWidgetItem, QCheckBox,
 )
 from PyQt5.QtGui import QColor, QBrush
 
@@ -31,6 +31,7 @@ class CountryPage(QWidget):
     country_property_changed = pyqtSignal(str, str, object)
     country_color_change_requested = pyqtSignal(str)
     country_delete_requested = pyqtSignal(str)
+    show_names_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -58,6 +59,11 @@ class CountryPage(QWidget):
         create_btn.setToolTip(tr("country_create_tip"))
         create_btn.clicked.connect(self.create_country_requested.emit)
         lay.addWidget(create_btn)
+
+        self._show_names_chk = QCheckBox(tr("country_show_names_label"))
+        self._show_names_chk.setChecked(True)
+        self._show_names_chk.toggled.connect(self.show_names_toggled.emit)
+        lay.addWidget(self._show_names_chk)
 
         # 国家列表（含搜索）
         list_box = _make_section(tr("country_list_section"))

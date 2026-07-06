@@ -244,6 +244,12 @@ class ApplicationController:
             return
         rgb = self._project.state_mgr.build_state_color_map(self._canvas.province_map)
         self._canvas.set_state_colors(rgb)
+        # 名字标签: 传惰性 provider, id 图构建推迟到画布防抖到期后执行
+        state_mgr = self._project.state_mgr
+        self._canvas.set_name_label_data("state", lambda: (
+            state_mgr.build_state_id_map(self._canvas.province_map),
+            {sid: s.name for sid, s in state_mgr.states.items()},
+        ))
         self._refresh_vp_data()
         # 统计未分配的 land province → 状态栏提示
         self._emit_unassigned_count()
@@ -316,6 +322,12 @@ class ApplicationController:
             tile_map=self._canvas.tile_map,
         )
         self._canvas.set_country_colors(rgb, assigned_mask)
+        # 名字标签: 传惰性 provider, 序号图构建推迟到画布防抖到期后执行
+        country_mgr = self._project.country_mgr
+        state_mgr = self._project.state_mgr
+        self._canvas.set_name_label_data("country", lambda: (
+            country_mgr.build_country_index_map(self._canvas.province_map, state_mgr)
+        ))
 
     def _refresh_sr_colors(self) -> None:
         if int(self._canvas.province_map.max()) == 0:

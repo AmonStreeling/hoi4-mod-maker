@@ -39,9 +39,10 @@ from domain.managers.river import (
 from views.canvas.ref_images import RefImageMixin, RefLayer
 from views.canvas.overlays import OverlayMixin, CS_OVERLAY_ALLOWED_MODES
 from views.canvas.input_router import InputMixin
+from views.canvas.name_labels import NameLabelsMixin
 
 
-class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
+class MapCanvas(InputMixin, OverlayMixin, NameLabelsMixin, RefImageMixin, QGraphicsView):
     """地图画布，支持缩放/拖动/绘制，脏矩形局部更新"""
 
     mouse_moved = pyqtSignal(int, int)
@@ -334,6 +335,9 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._scene.addItem(self._vp_overlay_item)
         self._vp_data: dict[int, int] = {}  # {province_id: vp_value}
 
+        # 名字标签叠加层 (state/country 模式显示名字)
+        self._init_name_labels()
+
         # 视图设置
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
@@ -385,6 +389,7 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._railway_color_rgb = None
         self._provincial_terrain_color_rgb = None
         self._continent_color_rgb = None
+        self.clear_name_labels()  # 旧标签坐标随地图作废
         h, w = map_data.tile_map.shape[0], map_data.tile_map.shape[1]
         self.new_land_mask = np.zeros((h, w), dtype=bool)
         self._display_buffer = np.zeros((h, w, 4), dtype=np.uint8)
@@ -651,6 +656,8 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         # rgb 变了 → country renderer 边界 cache 和 state renderer 国家边界 cache 都失效
         self._country_borders_cache = None
         self._state_country_borders_cache = None
+        # 预览政治视图叠的是国家色 → 一并失效
+        self._preview_political_cache = None
         # state 模式也叠加国家边界 → 改国家归属时需要刷新
         if self._display_mode in ("country", "state"):
             self._full_render()
@@ -959,6 +966,8 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
         self._update_pixmap_from_buffer()
         # VP 叠加层可见性切换（不重绘，用缓存）
         self._update_vp_visibility()
+        # 名字标签显隐（state/country 模式）
+        self._update_name_labels_visibility()
         # 密度叠加层：由 app_controller 管理显隐，这里只刷新内容
         if getattr(self, '_density_overlay_visible', False):
             self._render_density_overlay()
@@ -1113,6 +1122,9 @@ class MapCanvas(InputMixin, OverlayMixin, RefImageMixin, QGraphicsView):
 
         # 省份模式：固定 1 像素，不依赖刷子大小（边界编辑要精确）
         if self._display_mode == "province":
+            r = 0
+        elif self._display_mode == "river" and self._current_tool != "eraser":
+            # 河流画笔强制 1px（HOI4 河流必须 1 像素宽），尺寸滑杆只作用于橡皮
             r = 0
         else:
             r = self._brush_size // 2

@@ -326,6 +326,15 @@ class StateManager:
         rgb = lut[flat_clipped].reshape(province_map.shape[0], province_map.shape[1], 3)
         return rgb
 
+    def build_state_id_map(self, province_map: np.ndarray) -> np.ndarray:
+        """省份图 → state id 图 (0=海洋/未分配), 供名字标签排版用。"""
+        max_pid = int(province_map.max())
+        lut = np.zeros(max_pid + 1, dtype=np.int32)
+        for pid, sid in self._province_to_state.items():
+            if pid <= max_pid:
+                lut[pid] = sid
+        return lut[np.clip(province_map, 0, max_pid)]
+
     def count_unassigned_provinces(self, all_land_pids: set[int]) -> int:
         """返回还没分配到任何 state 的 land province 数量。"""
         assigned = set(self._province_to_state.keys())

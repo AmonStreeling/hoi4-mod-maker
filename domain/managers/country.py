@@ -206,6 +206,24 @@ class CountryManager:
         assigned_mask = assigned_lut[flat_clipped].reshape(rgb.shape[0], rgb.shape[1])
         return rgb, assigned_mask
 
+    def build_country_index_map(
+        self, province_map: np.ndarray, state_manager,
+    ) -> tuple[np.ndarray, dict[int, str]]:
+        """省份图 → 国家序号图 (0=未分配) + {序号: 国家名}, 供名字标签排版用。"""
+        tags = sorted(self._countries)
+        tag_idx = {t: i + 1 for i, t in enumerate(tags)}
+        names = {i + 1: (self._countries[t].name or t) for i, t in enumerate(tags)}
+        max_pid = int(province_map.max())
+        lut = np.zeros(max_pid + 1, dtype=np.int32)
+        for sid, state in state_manager.states.items():
+            idx = tag_idx.get(self._state_owner.get(sid, ""), 0)
+            if idx:
+                for pid in state.provinces:
+                    if pid <= max_pid:
+                        lut[pid] = idx
+        idx_map = lut[np.clip(province_map, 0, max_pid)]
+        return idx_map, names
+
     def get_country_list(self) -> list[tuple[str, str, tuple[int, int, int]]]:
         """返回 [(tag, name, color), ...] 用于 UI 列表"""
         return [(c.tag, c.name, c.color) for c in self._countries.values()]

@@ -5,6 +5,7 @@ country — zh 翻译
 """
 
 STRINGS: dict[str, str] = {
+    "country_show_names_label": "在地图上显示国家名字",
     "country_capital_label": "首都:",
     "country_capital_unset": "未设置",
     "country_color_label": "颜色:",
