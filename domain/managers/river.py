@@ -120,13 +120,14 @@ def validate_rivers(river_map: np.ndarray, lang: str = "zh") -> list[str]:
     struct_8conn = np.ones((3, 3), dtype=int)
     labeled, num_rivers = label(river_mask, structure=struct_8conn)
 
+    # 每条河的像素数/源头数一次 bincount 算完 (不逐河全图扫描)
+    pixel_counts = np.bincount(labeled.ravel(), minlength=num_rivers + 1)
+    source_counts = np.bincount(
+        labeled[river_map == RIVER_SOURCE].ravel(), minlength=num_rivers + 1
+    )
     for river_id in range(1, num_rivers + 1):
-        rmask = labeled == river_id
-        pixel_count = int(rmask.sum())
-
-        # 检查源头数量
-        source_count = int(((river_map == RIVER_SOURCE) & rmask).sum())
-        if source_count == 0:
+        if source_counts[river_id] == 0:
+            pixel_count = int(pixel_counts[river_id])
             if en:
                 warnings.append(f"River #{river_id} ({pixel_count}px): missing source marker (green)")
             else:

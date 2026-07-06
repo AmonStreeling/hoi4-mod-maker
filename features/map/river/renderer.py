@@ -1,4 +1,4 @@
-"""River 模式渲染: 陆地底图 + 河流叠加.
+"""River 模式渲染: 地形底图 + 河流叠加.
 
 HOI4 规定河流必须 1 像素宽，但在画布上 1 像素的蓝/红/黄线条几乎看不见，
 只有亮绿色的"源头"显眼。所以渲染时我们**在视觉上膨胀**河流显示为 3 像素，
@@ -7,7 +7,7 @@ HOI4 规定河流必须 1 像素宽，但在画布上 1 像素的蓝/红/黄线�
 
 import numpy as np
 
-from features.map.land import renderer as land_renderer
+from features.map.terrain import renderer as terrain_renderer
 from domain.managers.river import VALID_RIVER_VALUES
 
 
@@ -81,8 +81,8 @@ def _dilated_color_overlay(
 
 def render(canvas) -> None:
     from ui.canvas_widget import _RIVER_COLOR_LUT
-    # 先渲染陆地作为底图
-    land_renderer.render(canvas)
+    # 先渲染地形作为底图（画河要看得见山谷走向）
+    terrain_renderer.render(canvas)
     mask, colors = _dilated_color_overlay(canvas._river_map, _RIVER_COLOR_LUT)
     if np.any(mask):
         canvas._display_buffer[mask] = colors[mask]
@@ -97,8 +97,8 @@ def partial_render(canvas, x0: int, y0: int, x1: int, y1: int) -> None:
     ey0 = max(0, y0 - r)
     ex1 = min(w, x1 + r)
     ey1 = min(h, y1 + r)
-    # 先把扩大区域的底图（陆/海）重绘，免得旧的河流像素留在扩展带
-    land_renderer.partial_render(canvas, ex0, ey0, ex1, ey1)
+    # 先把扩大区域的底图（地形）重绘，免得旧的河流像素留在扩展带
+    terrain_renderer.partial_render(canvas, ex0, ey0, ex1, ey1)
     region = canvas._river_map[ey0:ey1, ex0:ex1]
     mask, colors = _dilated_color_overlay(region, _RIVER_COLOR_LUT)
     if np.any(mask):

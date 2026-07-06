@@ -68,3 +68,24 @@ def test_export_service_validate_missing_owner():
     warnings = validate_before_export(_FakeCanvas(), state_mgr, country_mgr)
     # 应该警告 State 1 未分配 owner
     assert any("未分配" in w for w in warnings)
+
+
+def test_export_service_validate_river_issues():
+    """河流缺源头 → 预检警告; 河流合法 → 无河流警告。"""
+    from services.export_service import validate_before_export
+    from domain.managers.state import StateManager
+    from domain.managers.country import CountryManager
+
+    class _FakeCanvas:
+        province_map = np.ones((10, 10), dtype=np.int32)
+        river_map = np.full((10, 10), 255, dtype=np.uint8)
+
+    canvas = _FakeCanvas()
+    canvas.river_map[5, 2:8] = 3  # 一段河, 没放源头标记
+
+    warnings = validate_before_export(canvas, StateManager(), CountryManager())
+    assert any("河流" in w and "源头" in w for w in warnings)
+
+    canvas.river_map[5, 2] = 0  # 补上源头
+    warnings = validate_before_export(canvas, StateManager(), CountryManager())
+    assert not any(w.startswith("河流") for w in warnings)

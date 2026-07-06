@@ -202,6 +202,9 @@ class RiverPage(QWidget):
         super().showEvent(event)
         if self._river_brush_slider.value() != 1:
             self._river_brush_slider.setValue(1)
+        else:
+            # 值没变时 setValue 不发信号 → 手动同步, 否则画布残留其他模式的笔刷尺寸
+            self.brush_size_changed.emit(1)
         # 重置到宽度模式，取消标记组
         default_btn = self._width_group.button(RIVER_WIDTH_4)
         if default_btn and not default_btn.isChecked():

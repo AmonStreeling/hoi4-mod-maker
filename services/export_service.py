@@ -46,6 +46,19 @@ def validate_before_export(canvas, state_mgr, country_mgr) -> list[str]:
         if country.capital <= 0:
             warnings.append(f"国家 {tag} 没有设首都")
 
+    # ── 河流合法性（显示级问题: 不会崩游戏, 但会断流/不显示）──
+    from domain.managers.river import validate_rivers, VALID_RIVER_VALUES
+    rm = getattr(canvas, "river_map", None)
+    if rm is not None and bool(np.isin(rm, list(VALID_RIVER_VALUES)).any()):
+        issues = [
+            w for w in validate_rivers(rm)
+            if "没有河流数据" not in w and "验证通过" not in w
+        ]
+        for w in issues[:5]:
+            warnings.append(f"河流: {w}")
+        if len(issues) > 5:
+            warnings.append(f"河流: 还有 {len(issues) - 5} 个问题, 详见河流页的「验证河流」")
+
     return warnings
 
 
