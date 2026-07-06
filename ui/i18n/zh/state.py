@@ -5,6 +5,16 @@ state — zh 翻译
 """
 
 STRINGS: dict[str, str] = {
+    "state_show_names_label": "在地图上显示州名字",
+    "state_resplit_count_label": "目标省份数:",
+    "state_resplit_count_tip": "重新分割后这个州大约有多少个省份（选中州时自动填入当前数量）",
+    "state_resplit_btn": "重新分割此州的省份",
+    "state_resplit_btn_tip": "清除该州现有省份，在州的范围内按目标数量重新生成。州的归属国家不变，可撤销 (Ctrl+Z)。",
+    "resplit_confirm_title": "重新分割州内省份",
+    "resplit_confirm_body": "将清除州 {sid}「{name}」的 {old} 个省份，在原范围内重新生成约 {new} 个。\n州的归属国家不变，可用 Ctrl+Z 撤销。",
+    "resplit_confirm_vp_warn": "⚠ 该州的 {n} 个胜利点会被清除，重分割后需要重新设置。",
+    "resplit_confirm_capital_warn": "⚠ 国家 {tags} 的首都在此州内，重分割后首都会失效，需要重新设置。",
+    "resplit_done_status": "州 {sid} 已重新分割为 {n} 个省份",
     "state_assign_drag_label": "拖拽分配省份到州",
     "state_assign_drag_label_active": "✓ 分配中（再点击退出）",
     "state_delete_btn": "🗑 删除当前州",

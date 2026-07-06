@@ -39,6 +39,8 @@ class StatePage(QWidget):
     batch_create_state_confirmed = pyqtSignal()
     assign_mode_changed = pyqtSignal(bool)
     state_delete_requested = pyqtSignal(int)
+    show_names_toggled = pyqtSignal(bool)
+    resplit_state_requested = pyqtSignal(int, int)  # (state_id, 目标省份数)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -71,6 +73,11 @@ class StatePage(QWidget):
         self._state_per_spin.setToolTip(tr("state_per_spin_tip"))
         auto_row.addWidget(self._state_per_spin, 1)
         ql.addLayout(auto_row)
+
+        self._show_names_chk = QCheckBox(tr("state_show_names_label"))
+        self._show_names_chk.setChecked(True)
+        self._show_names_chk.toggled.connect(self.show_names_toggled.emit)
+        ql.addWidget(self._show_names_chk)
         lay.addWidget(quick_box)
 
         # ── 手动编辑 ──
@@ -164,6 +171,23 @@ class StatePage(QWidget):
         detail_btn.clicked.connect(self._on_state_detail_clicked)
         il.addWidget(detail_btn)
 
+        # 重新分割州内省份 (数量可调)
+        resplit_row = QHBoxLayout()
+        resplit_lbl = QLabel(tr("state_resplit_count_label"))
+        resplit_lbl.setStyleSheet(_LABEL_STYLE)
+        resplit_row.addWidget(resplit_lbl)
+        self._resplit_spin = QSpinBox()
+        self._resplit_spin.setRange(1, 500)
+        self._resplit_spin.setValue(10)
+        self._resplit_spin.setStyleSheet(_SPINBOX_STYLE)
+        self._resplit_spin.setToolTip(tr("state_resplit_count_tip"))
+        resplit_row.addWidget(self._resplit_spin)
+        il.addLayout(resplit_row)
+        resplit_btn = QPushButton(tr("state_resplit_btn"))
+        resplit_btn.setToolTip(tr("state_resplit_btn_tip"))
+        resplit_btn.clicked.connect(self._on_resplit_clicked)
+        il.addWidget(resplit_btn)
+
         # 删除当前州按钮 (危险操作, 用红色按钮 + 二次确认)
         delete_btn = QPushButton(tr("state_delete_btn"))
         delete_btn.setStyleSheet(
@@ -207,6 +231,11 @@ class StatePage(QWidget):
             state_id = item.data(Qt.UserRole)
             if state_id is not None:
                 self._current_state_id = int(state_id)
+                # 重分割数量默认 = 该州当前省份数
+                for sid, _name, count, _tag in self._state_items_cache:
+                    if sid == state_id and count > 0:
+                        self._resplit_spin.setValue(min(count, 500))
+                        break
                 self.state_selected.emit(state_id)
 
     def _on_state_name_changed(self) -> None:
@@ -235,6 +264,12 @@ class StatePage(QWidget):
     def _on_state_detail_clicked(self) -> None:
         if self._current_state_id > 0:
             self.state_detail_requested.emit(self._current_state_id)
+
+    def _on_resplit_clicked(self) -> None:
+        if self._current_state_id > 0:
+            self.resplit_state_requested.emit(
+                self._current_state_id, self._resplit_spin.value()
+            )
 
     def _on_state_delete_clicked(self) -> None:
         if self._current_state_id <= 0:
