@@ -178,7 +178,7 @@ class MainWindowFileOpsMixin:
         md.province_map = np.zeros((new_h, new_w), dtype=np.int32)
         md.terrain_map = np.zeros((new_h, new_w), dtype=np.uint8)
         md.height_map = np.full((new_h, new_w), 40, dtype=np.uint8)
-        md.river_map = np.zeros((new_h, new_w), dtype=np.uint8)
+        md.river_map = np.full((new_h, new_w), 255, dtype=np.uint8)  # 255=陆地背景，0 是源头标记不能当空白
         self._project.map_data = md
         self._canvas.set_map_data(md)
         self._canvas._scene.setSceneRect(0, 0, new_w, new_h)
