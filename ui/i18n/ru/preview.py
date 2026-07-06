@@ -13,4 +13,6 @@ STRINGS = {
     "preview_game_dir_invalid": "В выбранной папке нет файлов игры (должен быть common/terrain/00_terrain.txt). Выберите корневую папку установки Hearts of Iron IV.",
     "preview_choose_dir_btn": "Выбрать папку установки игры",
     "preview_choose_dir_title": "Выбор папки установки Hearts of Iron IV",
+    "preview_political_label": "Политический вид (цвета стран)",
+    "preview_political_hint": "Тот же вид, что политическая карта в игре: цвета стран поверх рельефа с освещением, затемнённые границы. Нужны созданные страны с территорией, иначе виден только рельеф.",
 }

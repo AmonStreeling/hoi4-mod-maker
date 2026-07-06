@@ -14,4 +14,5 @@ STRINGS: dict[str, str] = {
 (1=город, 5=средний, 10=крупный, 20=столица):""",
     "context_set_vp_title": "Установить очко победы",
     "context_unassigned_state": "(Регион не назначен)",
+    "context_edit_state_detail": "Редактировать регион (ресурсы / здания)...",
 }

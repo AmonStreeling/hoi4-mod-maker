@@ -33,4 +33,5 @@ STRINGS: dict[str, str] = {
     "dlg_country_name_prompt": "Enter country name (TAG: {tag}):",
     "dlg_country_pick_color": "Choose color for {tag}",
     "dlg_country_tag_prompt": "Enter country TAG (3 letters):",
+    "country_show_names_label": "Show country names on the map",
 }

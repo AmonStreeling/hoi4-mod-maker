@@ -16,4 +16,5 @@ STRINGS: dict[str, str] = {
 (1=town, 5=medium, 10=city, 20=capital):""",
     "context_set_vp_title": "Set Victory Point",
     "context_unassigned_state": "(Unassigned State)",
+    "context_edit_state_detail": "Edit state details (resources / buildings)...",
 }

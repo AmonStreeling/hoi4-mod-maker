@@ -13,4 +13,6 @@ STRINGS = {
     "preview_game_dir_invalid": "No game files found in the selected folder (it should contain common/terrain/00_terrain.txt). Please select the Hearts of Iron IV installation root.",
     "preview_choose_dir_btn": "Select Game Installation Folder",
     "preview_choose_dir_title": "Select Hearts of Iron IV Installation Folder",
+    "preview_political_label": "Political view (country colors overlay)",
+    "preview_political_hint": "Same look as the in-game political map: country colors over terrain lighting, darkened borders. Requires countries with assigned territory — otherwise only terrain shows.",
 }

@@ -31,4 +31,5 @@ STRINGS: dict[str, str] = {
     "dlg_country_name_prompt": "Введите название страны (TAG: {tag}):",
     "dlg_country_pick_color": "Выберите цвет для {tag}",
     "dlg_country_tag_prompt": "Введите TAG страны (3 буквы):",
+    "country_show_names_label": "Показывать названия стран на карте",
 }
