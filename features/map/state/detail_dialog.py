@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout,
     QLabel, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QComboBox,
     QPushButton, QGroupBox, QListWidget, QInputDialog, QTabWidget, QWidget,
+    QScrollArea,
 )
 
 from ui.i18n import tr
@@ -82,7 +83,7 @@ class StateDetailDialog(QDialog):
         self._state = state
         self._country_tags = country_tags
         self.setWindowTitle(tr("state_dlg_title_fmt", state.name, state.id))
-        self.setMinimumSize(500, 540)
+        self.setMinimumSize(520, 600)
 
         self._build_ui()
         self._load_from_state()
@@ -95,10 +96,11 @@ class StateDetailDialog(QDialog):
         tabs = QTabWidget()
         root.addWidget(tabs, 1)
 
-        tabs.addTab(self._build_basic_tab(), tr("state_dlg_tab_basic"))
-        tabs.addTab(self._build_resources_tab(), tr("state_dlg_tab_resources"))
-        tabs.addTab(self._build_buildings_tab(), tr("state_dlg_tab_buildings"))
-        tabs.addTab(self._build_cores_tab(), tr("state_dlg_tab_cores"))
+        # 每个 tab 包滚动区域: 内容(建筑13行/VP多行)超过窗口高度时可滚动, 不再被裁掉
+        tabs.addTab(self._wrap_scroll(self._build_basic_tab()), tr("state_dlg_tab_basic"))
+        tabs.addTab(self._wrap_scroll(self._build_resources_tab()), tr("state_dlg_tab_resources"))
+        tabs.addTab(self._wrap_scroll(self._build_buildings_tab()), tr("state_dlg_tab_buildings"))
+        tabs.addTab(self._wrap_scroll(self._build_cores_tab()), tr("state_dlg_tab_cores"))
 
         # 底部按钮
         btn_row = QHBoxLayout()
@@ -110,6 +112,15 @@ class StateDetailDialog(QDialog):
         btn_row.addWidget(ok_btn)
         btn_row.addWidget(cancel_btn)
         root.addLayout(btn_row)
+
+    @staticmethod
+    def _wrap_scroll(inner: QWidget) -> QScrollArea:
+        """tab 内容套滚动区域, 高度不够时出滚动条。"""
+        area = QScrollArea()
+        area.setWidgetResizable(True)
+        area.setFrameShape(QScrollArea.Shape.NoFrame)
+        area.setWidget(inner)
+        return area
 
     def _build_basic_tab(self) -> QWidget:
         w = QWidget()
