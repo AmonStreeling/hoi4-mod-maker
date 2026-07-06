@@ -7,6 +7,8 @@ STRINGS = {
     "preview_page_desc": "用游戏本体的地形贴图、光影和气候色调，把当前地图渲染成接近游戏内的样子。材质和颜色全部来自游戏文件，不是模拟配色。",
     "preview_refresh_btn": "刷新预览",
     "preview_refresh_hint": "修改地图后预览不会自动更新（整图渲染需要几秒）。改完地图回到这里点一下「刷新预览」即可看到最新效果。",
+    "preview_political_label": "政治视图（叠加国家势力色）",
+    "preview_political_hint": "和游戏内政治地图同款效果：国家颜色盖在地形光影上，国界压暗。需要先创建国家并分配领土，否则只显示地形。",
     "preview_game_dir_title": "游戏目录",
     "preview_game_dir_found": "已找到游戏文件：{path}",
     "preview_game_dir_missing": "未找到《钢铁雄心4》安装目录。预览需要读取游戏自带的地形贴图，请点击下方按钮选择游戏的安装文件夹。",

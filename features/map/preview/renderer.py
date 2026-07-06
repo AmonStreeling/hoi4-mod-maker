@@ -20,6 +20,7 @@ from services.game_assets import get_default_assets
 def invalidate_cache(canvas) -> None:
     """清掉合成缓存, 下次渲染重新合成。"""
     canvas._preview_cache = None
+    canvas._preview_political_cache = None
 
 
 def render(canvas) -> None:
@@ -28,12 +29,26 @@ def render(canvas) -> None:
     if cache is None or cache.shape[:2] != canvas._tile_map.shape:
         cache = _compose(canvas)
         canvas._preview_cache = cache
+        canvas._preview_political_cache = None
 
     if cache is None:
         # 游戏资产不可用 → 降级大陆视图 (原因已写入 canvas._preview_error)
         from features.map.land.renderer import render as land_render
         land_render(canvas)
         return
+
+    # 政治视图开关: 底图上叠国家势力色 (结果单独缓存)
+    if getattr(canvas, "_preview_political", False):
+        pcache = getattr(canvas, "_preview_political_cache", None)
+        if pcache is None or pcache.shape[:2] != cache.shape[:2]:
+            from domain.preview.political import apply_political_layer
+            pcache = apply_political_layer(
+                cache,
+                getattr(canvas, "_country_color_rgb", None),
+                getattr(canvas, "_country_assigned_mask", None),
+            )
+            canvas._preview_political_cache = pcache
+        cache = pcache
 
     # RGB → 显示缓冲 (BGRA)
     buf = canvas._display_buffer

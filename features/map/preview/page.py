@@ -12,7 +12,7 @@ import os
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QPushButton, QFileDialog,
+    QWidget, QVBoxLayout, QLabel, QPushButton, QFileDialog, QCheckBox,
 )
 
 from services.game_assets import get_default_assets
@@ -23,6 +23,7 @@ from ui.styles import _SECTION_STYLE, _SUCCESS_BTN_STYLE, _DIM
 class PreviewPage(QWidget):
     refresh_requested = pyqtSignal()
     game_dir_changed = pyqtSignal(str)
+    political_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -48,6 +49,15 @@ class PreviewPage(QWidget):
         hint.setWordWrap(True)
         hint.setStyleSheet(f"color: {_DIM}; font-size: 11px;")
         layout.addWidget(hint)
+
+        # 政治视图: 底图上叠加国家势力色 (需要先建国家并分配领土)
+        self._political_chk = QCheckBox(tr("preview_political_label"))
+        self._political_chk.toggled.connect(self.political_toggled.emit)
+        layout.addWidget(self._political_chk)
+        political_hint = QLabel(tr("preview_political_hint"))
+        political_hint.setWordWrap(True)
+        political_hint.setStyleSheet(f"color: {_DIM}; font-size: 11px;")
+        layout.addWidget(political_hint)
 
         # ── 游戏目录状态 ──
         dir_title = QLabel(tr("preview_game_dir_title"))
