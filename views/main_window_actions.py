@@ -652,7 +652,9 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
     def _on_quick_create_country(self, tag: str, name: str, party: str) -> None:
         color = getattr(self._tool_panel, '_quick_create_color', (100, 100, 200))
         ctrl: CountryController = self._controllers["country"]
-        ctrl.create_country(tag, name, color, party)
+        if ctrl.create_country(tag, name, color, party):
+            # 建国后自然是圈地 → 自动开启分配领土模式 (按钮走信号同步 controller)
+            self._tool_panel.set_country_assign_mode(True)
 
     def _on_country_highlight(self, tag: str) -> None:
         """切换选中国家时, 把该国 RGB 传给 canvas, country renderer 会高亮该国像素."""
@@ -861,6 +863,7 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         self._project.mark_dirty()
         self._project.mark_assets_dirty(
             "map/terrain/colormap_rgb_cityemissivemask_a.dds",
+            "map/terrain/fow_rgb_waterspec_a.dds",
         )
         self._project.mark_assets_dirty(
             "map/terrain/world_normal.bin",
@@ -995,10 +998,11 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
             self._cmd_history._notify()
 
         self._project.mark_dirty()
-        # 自动生成高度 → world_normal / colormap 要重生
+        # 自动生成高度 → world_normal / colormap / fow 要重生
         self._project.mark_assets_dirty(
             "map/world_normal.bmp",
             "map/terrain/colormap_rgb_cityemissivemask_a.dds",
+            "map/terrain/fow_rgb_waterspec_a.dds",
         )
         self._status_info.setText(tr("status_auto_height_done"))
 
@@ -1032,6 +1036,7 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         self._project.mark_assets_dirty(
             "map/world_normal.bmp",
             "map/terrain/colormap_rgb_cityemissivemask_a.dds",
+            "map/terrain/fow_rgb_waterspec_a.dds",
         )
         self._status_info.setText(tr("status_height_from_terrain_done"))
 

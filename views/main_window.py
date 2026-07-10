@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from PyQt5.QtWidgets import (
     QMainWindow, QAction, QFileDialog, QMessageBox, QWidget,
-    QLabel, QApplication, QInputDialog, QStackedWidget, QHBoxLayout,
+    QLabel, QApplication, QStackedWidget, QHBoxLayout,
     QWidgetAction, QSlider,
 )
 from PyQt5.QtCore import Qt, QTimer, QPoint
@@ -168,6 +168,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         self._add_action(file_menu, tr("action_new"), self._on_new_project, QKeySequence.StandardKey.New)
         self._add_action(file_menu, tr("action_open"), self._on_open_project, "Ctrl+O")
         self._add_action(file_menu, tr("action_save"), self._on_save_project, "Ctrl+S")
+        self._add_action(file_menu, tr("action_save_as"), self._on_save_project_as, "Ctrl+Shift+S")
         file_menu.addSeparator()
         self._add_action(file_menu, tr("action_import_image"), self._on_import_image, "Ctrl+I")
         self._add_action(file_menu, tr("action_load_vanilla_ref"), self._on_load_vanilla_ref)
@@ -298,6 +299,7 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.preview_refresh_requested.connect(self._on_preview_refresh)
         tp.preview_game_dir_changed.connect(self._on_preview_game_dir_changed)
         tp.preview_political_toggled.connect(self._on_preview_political_toggled)
+        tp.preview_night_toggled.connect(self._on_preview_night_toggled)
 
         # 工具/画笔 → 画布 (直通)
         tp.tool_changed.connect(cv.set_tool)
@@ -452,6 +454,9 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.country_show_names_toggled.connect(
             lambda on: cv.set_name_labels_enabled("country", on)
         )
+        tp.country_assign_mode_toggled.connect(
+            lambda on: self._controllers["country"].set_assign_mode(on)
+        )
 
         # River 信号
         tp.river_type_changed.connect(cv.set_river_type)
@@ -579,15 +584,13 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         sid = state_mgr.get_state_of_province(pid)
         state = state_mgr.get_state(sid) if sid > 0 else None
         cur_vp = state.victory_points.get(pid, 0) if state else 0
+        cur_name = state.vp_names.get(pid, "") if state else ""
 
-        value, ok = QInputDialog.getInt(
-            self, tr("dlg_vp_title_fmt", pid),
-            tr("dlg_vp_prompt"),
-            cur_vp if cur_vp > 0 else 1, 0, 50, 1,
-        )
+        from views.vp_dialog import ask_vp
+        value, name, ok = ask_vp(self, pid, cur_vp, cur_name)
         if ok:
             ctrl: StateController = self._controllers["state"]
-            ctrl.set_vp(pid, value)
+            ctrl.set_vp(pid, value, name)
 
     def _on_evt_logistics_picked(self, event) -> None:
         pid = event.data.get("pid", 0)
@@ -638,6 +641,14 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
             # 预览模式下国家色平时不刷新, 开叠加前拉一次最新数据
             self._app._refresh_country_colors()
         self._canvas._preview_political_cache = None
+        if self._canvas.display_mode == "preview":
+            self._canvas._full_render()
+
+    def _on_preview_night_toggled(self, on: bool) -> None:
+        """预览页"夜景"开关: 压暗底图并点亮 urban 城市灯光。"""
+        self._canvas._preview_night = bool(on)
+        self._canvas._preview_night_cache = None
+        self._canvas._preview_night_src = None
         if self._canvas.display_mode == "preview":
             self._canvas._full_render()
 
@@ -1114,6 +1125,8 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         from views.main_window_file_ops import _populate_imported_data
         _populate_imported_data(self._project, result)
         self._project._dirty = False
+        # 导入的项目不绑定项目文件 (原版参考尤其不能写回), 保存走另存为
+        self._current_project_path = None
 
         self._canvas.set_map_data(md)
         self._canvas._scene.setSceneRect(0, 0, new_w, new_h)

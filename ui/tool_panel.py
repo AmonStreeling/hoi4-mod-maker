@@ -293,6 +293,7 @@ class ToolPanel(QWidget):
     preview_refresh_requested = pyqtSignal()
     preview_game_dir_changed = pyqtSignal(str)
     preview_political_toggled = pyqtSignal(bool)
+    preview_night_toggled = pyqtSignal(bool)
     split_mode_toggled = pyqtSignal(bool)
     lasso_province_toggled = pyqtSignal(bool)
     merge_mode_toggled = pyqtSignal(bool)
@@ -316,6 +317,7 @@ class ToolPanel(QWidget):
     country_property_changed = pyqtSignal(str, str, object)
     country_color_change_requested = pyqtSignal(str)
     country_show_names_toggled = pyqtSignal(bool)
+    country_assign_mode_toggled = pyqtSignal(bool)
 
     # 河流信号
     river_type_changed = pyqtSignal(int)
@@ -618,6 +620,19 @@ class ToolPanel(QWidget):
         p.country_color_change_requested.connect(self.country_color_change_requested)
         p.country_delete_requested.connect(self.country_delete_requested)
         p.show_names_toggled.connect(self.country_show_names_toggled)
+        p.assign_mode_toggled.connect(self.country_assign_mode_toggled)
+
+    def reset_country_assign_mode(self) -> None:
+        """切出国家模式时把"分配领土模式"按钮复位（不触发信号）。"""
+        self._country_page.reset_assign_mode()
+
+    def set_country_assign_mode(self, on: bool) -> None:
+        """程序化开关"分配领土模式"（触发信号, controller 会同步）。"""
+        self._country_page.set_assign_mode(on)
+
+    def select_country_in_list(self, tag: str) -> None:
+        """地图点击选国后同步国家列表高亮。"""
+        self._country_page.select_country_in_list(tag)
 
     def _connect_continent_signals(self) -> None:
         p = self._continent_page
@@ -667,6 +682,7 @@ class ToolPanel(QWidget):
         p.refresh_requested.connect(self.preview_refresh_requested)
         p.game_dir_changed.connect(self.preview_game_dir_changed)
         p.political_toggled.connect(self.preview_political_toggled)
+        p.night_toggled.connect(self.preview_night_toggled)
 
     # ── 属性 (保持与 MainWindow 的兼容) ──────────────────────
     @property
