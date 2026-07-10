@@ -87,30 +87,32 @@ class NameLabelsMixin:
         pen.setWidthF(0.8)
 
         items = []
-        for rid, (cx, cy, angle, length, width) in placements.items():
+        for rid, spots in placements.items():
             text = names.get(rid, "")
             if not text:
                 continue
-            it = QGraphicsSimpleTextItem(text)
-            it.setFont(font)
-            it.setBrush(brush)
-            it.setPen(pen)
-            br = it.boundingRect()
-            # 文字铺满长轴 ~70%, 且不超过短轴高度的 90%
-            s = min(
-                length * 0.7 / max(br.width(), 1.0),
-                width * 0.9 / max(br.height(), 1.0),
-            )
-            if br.height() * s < _MIN_TEXT_HEIGHT:
-                continue
-            it.setTransformOriginPoint(br.center())
-            it.setRotation(angle)
-            it.setScale(s)
-            it.setPos(cx - br.center().x(), cy - br.center().y())
-            it.setZValue(6)
-            # 缓存渲染结果: 拖动画布时贴缓存位图, 不逐帧重绘矢量文字
-            it.setCacheMode(QGraphicsItem.CacheMode.DeviceCoordinateCache)
-            it.setVisible(False)  # 显隐统一由 _update_name_labels_visibility 管
-            self._scene.addItem(it)
-            items.append(it)
+            # 区域每个连通块各放一个名字(飞地/被切开的部分单独标)
+            for cx, cy, angle, length, width in spots:
+                it = QGraphicsSimpleTextItem(text)
+                it.setFont(font)
+                it.setBrush(brush)
+                it.setPen(pen)
+                br = it.boundingRect()
+                # 文字铺满长轴 ~70%, 且不超过短轴高度的 90%
+                s = min(
+                    length * 0.7 / max(br.width(), 1.0),
+                    width * 0.9 / max(br.height(), 1.0),
+                )
+                if br.height() * s < _MIN_TEXT_HEIGHT:
+                    continue
+                it.setTransformOriginPoint(br.center())
+                it.setRotation(angle)
+                it.setScale(s)
+                it.setPos(cx - br.center().x(), cy - br.center().y())
+                it.setZValue(6)
+                # 缓存渲染结果: 拖动画布时贴缓存位图, 不逐帧重绘矢量文字
+                it.setCacheMode(QGraphicsItem.CacheMode.DeviceCoordinateCache)
+                it.setVisible(False)  # 显隐统一由 _update_name_labels_visibility 管
+                self._scene.addItem(it)
+                items.append(it)
         self._name_label_items[mode] = items
