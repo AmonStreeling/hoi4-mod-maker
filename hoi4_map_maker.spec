@@ -6,7 +6,7 @@
 
 import os
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
@@ -34,52 +34,11 @@ a = Analysis(
         *([('resources', 'resources')] if os.path.exists('resources') else []),
     ],
     hiddenimports=[
-        # features 是动态加载的, PyInstaller 抓不到, 显式列出
-        'features.map.land',
-        'features.map.province',
-        'features.map.terrain',
-        'features.map.height',
-        'features.map.state',
-        'features.map.country',
-        'features.map.river',
-        'features.map.continent',
-        'features.content.tech_tree',
-        'features.content.focus_tree',
-        'features.content.events',
-        'features.content.decisions',
-        'features.content.characters',
-        'features.content.portraits',
-        'features.content.oob',
-        'features.content.namelist',
-        'features.content.flags',
-        'features.content.ideas',
-        'features.map.density',
-        'features.map.density.page',
-        'features.map.land.page',
-        'features.map.province.page',
-        'features.map.terrain.page',
-        'features.map.height.page',
-        'features.map.state.page',
-        'features.map.country.page',
-        'features.map.river.page',
-        'features.map.land.renderer',
-        'features.map.province.renderer',
-        'features.map.terrain.renderer',
-        'features.map.height.renderer',
-        'features.map.state.renderer',
-        'features.map.country.renderer',
-        'features.map.river.renderer',
-        'features.map.state.detail_dialog',
-        'features.map.continent.dialog',
-        'features.map.logistics',
-        'features.map.logistics.page',
-        'features.map.logistics.renderer',
-        'features.map.strategic_region',
-        'features.map.strategic_region.page',
-        'features.map.colormap',
-        'features.map.colormap.page',
-        'features.map.default_map',
-        'features.map.default_map.page',
+        # features 全部动态加载 (canvas._resolve_renderer 用 importlib 按字符串
+        # import), PyInstaller 静态分析抓不到 → 自动收集整个包, 加新 feature
+        # 不用改 spec。v1.3.2 曾因手工白名单漏掉 strategic_region/continent/
+        # province_terrain/preview 的 renderer 导致 exe 切换这些模式必崩。
+        *collect_submodules('features'),
         'scipy.ndimage',
         'scipy.spatial',
         # 包名 pyqtdarktheme != 模块名 qdarktheme, PyInstaller 静态分析在某些环境抓不到, 显式声明
