@@ -32,6 +32,7 @@ class CountryPage(QWidget):
     country_color_change_requested = pyqtSignal(str)
     country_delete_requested = pyqtSignal(str)
     show_names_toggled = pyqtSignal(bool)
+    assign_mode_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -64,6 +65,19 @@ class CountryPage(QWidget):
         self._show_names_chk.setChecked(True)
         self._show_names_chk.toggled.connect(self.show_names_toggled.emit)
         lay.addWidget(self._show_names_chk)
+
+        # 分配领土模式开关: 关(默认)=点击地图只查看国家信息; 开=点击州改归属
+        self._assign_mode_btn = QPushButton(tr("country_assign_mode_btn"))
+        self._assign_mode_btn.setCheckable(True)
+        self._assign_mode_btn.setToolTip(tr("country_assign_mode_tip"))
+        self._assign_mode_btn.setStyleSheet(
+            "QPushButton { padding: 6px; border-radius: 4px;"
+            f" border: 1px solid {_BORDER}; }}"
+            "QPushButton:checked { background: #b45309; color: white;"
+            " font-weight: 600; border: 1px solid #f59e0b; }"
+        )
+        self._assign_mode_btn.toggled.connect(self.assign_mode_toggled.emit)
+        lay.addWidget(self._assign_mode_btn)
 
         # 国家列表（含搜索）
         list_box = _make_section(tr("country_list_section"))
@@ -296,6 +310,26 @@ class CountryPage(QWidget):
         self._country_list.blockSignals(False)
 
     # ── 公共更新方法 ──
+    def reset_assign_mode(self) -> None:
+        """切出国家模式时退回信息模式（不触发信号, controller 已自行重置）。"""
+        self._assign_mode_btn.blockSignals(True)
+        self._assign_mode_btn.setChecked(False)
+        self._assign_mode_btn.blockSignals(False)
+
+    def set_assign_mode(self, on: bool) -> None:
+        """程序化切换分配模式按钮（触发 assign_mode_toggled 信号）。"""
+        self._assign_mode_btn.setChecked(on)
+
+    def select_country_in_list(self, tag: str) -> None:
+        """地图点击选国后同步列表高亮（不触发 country_selected 信号）。"""
+        self._country_list.blockSignals(True)
+        for i in range(self._country_list.count()):
+            it = self._country_list.item(i)
+            if it is not None and it.data(Qt.UserRole) == tag:
+                self._country_list.setCurrentItem(it)
+                break
+        self._country_list.blockSignals(False)
+
     def update_country_list(self, countries: list[tuple[str, str, tuple]]) -> None:
         """刷新国家列表，items 为 (tag, name, color)"""
         self._country_items_cache = list(countries)

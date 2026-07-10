@@ -456,6 +456,14 @@ class ApplicationController:
                 self._update_country_info_panel(tag)
         elif action == "selected" and tag:
             self._update_country_info_panel(tag)
+            # 地图点击(信息模式)选中的国家 → 列表高亮 + 画布高亮该国领土
+            self._panel.select_country_in_list(tag)
+            country = self._project.country_mgr.get_country(tag)
+            if country and self._canvas.display_mode == "country":
+                self._canvas.set_highlight_country(tuple(country.color))
+        elif action == "assign_mode_reset":
+            # 切出国家模式 → "分配领土模式"按钮复位
+            self._panel.reset_country_assign_mode()
 
     def _update_country_info_panel(self, tag: str) -> None:
         country = self._project.country_mgr.get_country(tag)

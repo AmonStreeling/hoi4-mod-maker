@@ -22,6 +22,9 @@ class CountryController(BaseController):
     def __init__(self, project: "Project", command_history: "CommandHistory") -> None:
         super().__init__(project, command_history)
         self.selected_country_tag: str = ""
+        # False = 信息模式(默认): 点击地图查看该处国家, 不改归属
+        # True  = 分配领土模式: 点击州分配给当前选中国家
+        self.assign_mode: bool = False
         # 始终监听省份重新生成
         self.event_bus.subscribe("province_map_regenerated", self._on_province_regen)
 
@@ -38,12 +41,30 @@ class CountryController(BaseController):
         self.event_bus.emit("country_changed", tag="", action="refresh")
 
     def deactivate(self) -> None:
-        """离开国家模式。"""
-        pass
+        """离开国家模式：退回信息模式, 防止回来时误点改归属。"""
+        if self.assign_mode:
+            self.assign_mode = False
+            self.event_bus.emit(
+                "country_changed", tag="", action="assign_mode_reset")
+
+    def set_assign_mode(self, on: bool) -> None:
+        """切换 分配领土 / 信息 模式（页面按钮回调）。"""
+        self.assign_mode = bool(on)
+        if on:
+            self._emit_status(
+                "分配领土模式：点击地图上的州分配给当前选中的国家（Ctrl+Z 撤销可归还原主）")
+        else:
+            self._emit_status("信息模式：点击地图查看该处的国家")
 
     def on_province_clicked(self, pid: int) -> None:
-        """点击省份：将所在 State 分配给当前选中国家。"""
-        if pid <= 0 or not self.selected_country_tag:
+        """点击省份：信息模式查看该处国家; 分配模式把所在 State 分给选中国家。"""
+        if pid <= 0:
+            return
+        if not self.assign_mode:
+            self._show_country_at(pid)
+            return
+        if not self.selected_country_tag:
+            self._emit_status("请先在国家列表选中一个国家，再分配领土")
             return
 
         state_mgr = self.project.state_mgr
@@ -54,12 +75,8 @@ class CountryController(BaseController):
             self._emit_status("该省份未分配到任何 State")
             return
 
-        # 获取旧的所有者
-        old_tag = ""
-        for tag, country in country_mgr.countries.items():
-            if state_id in getattr(country, "states", []):
-                old_tag = tag
-                break
+        # 获取旧的所有者 (undo 时归还给它)
+        old_tag = country_mgr.get_owner_of_state(state_id)
 
         if old_tag == self.selected_country_tag:
             return  # 已属于此国家
@@ -78,6 +95,20 @@ class CountryController(BaseController):
         self._emit_status(
             f"State {state_id} 已分配给 {self.selected_country_tag}"
         )
+
+    def _show_country_at(self, pid: int) -> None:
+        """信息模式：查该省所在州属于哪个国家并选中它（面板显示可编辑信息）。"""
+        state_id = self.project.state_mgr.get_state_of_province(pid)
+        if state_id <= 0:
+            self._emit_status("该省份未分配到任何 State")
+            return
+        tag = self.project.country_mgr.get_owner_of_state(state_id)
+        if tag:
+            country = self.project.country_mgr.get_country(tag)
+            self.select_country(tag)
+            self._emit_status(f"{tag}（{country.name}）— 左侧面板可编辑该国信息")
+        else:
+            self._emit_status(f"State {state_id} 尚未分配给任何国家")
 
     def on_province_right_clicked(self, pid: int, x: int, y: int) -> None:
         """右键省份：设为当前国家的首都。"""
