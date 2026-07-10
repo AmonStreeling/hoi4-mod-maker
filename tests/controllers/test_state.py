@@ -74,6 +74,17 @@ def test_set_vp(state_setup):
     assert state.victory_points.get(1) == 10
 
 
+def test_set_vp_with_name(state_setup):
+    ctrl, project, _ = state_setup
+    ctrl.set_vp(1, 10, "斯图加特")
+    state = project.state_mgr.get_state(1)
+    assert state.victory_points.get(1) == 10
+    assert state.vp_names.get(1) == "斯图加特"
+    # 空名字 = 清掉旧名
+    ctrl.set_vp(1, 10, "")
+    assert state.vp_names.get(1) == ""
+
+
 def test_set_vp_zero_removes(state_setup):
     ctrl, project, _ = state_setup
     ctrl.set_vp(1, 5)

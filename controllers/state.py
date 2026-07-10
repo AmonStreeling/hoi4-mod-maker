@@ -150,9 +150,11 @@ class StateController(BaseController):
         cmd = SetVPCommand(state_mgr, pid, old_vp, new_vp)
         self.history.execute(cmd)
 
-        # 保存城市名
-        if new_vp and name:
+        # 保存城市名 (对话框传空名字 = 清掉旧名)
+        if new_vp:
             state_mgr.set_vp(pid, value, name)
+            if not name and state is not None:
+                state.vp_names[pid] = ""
         self.project.mark_dirty()
 
         if new_vp:

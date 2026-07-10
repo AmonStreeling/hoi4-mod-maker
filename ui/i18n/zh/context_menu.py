@@ -12,7 +12,7 @@ STRINGS: dict[str, str] = {
     "context_province_info": "省份 {} 信息",
     "context_set_capital": "设为首都",
     "context_set_terrain": "设置地形",
-    "context_set_vp": "设置胜利点...",
+    "context_set_vp": "设置胜利点 / 城市名...",
     "context_set_vp_label": """省份 {} 的 VP 分值
 (1=小镇, 5=中等, 10=城市, 20=首都):""",
     "context_set_vp_title": "设置胜利点",

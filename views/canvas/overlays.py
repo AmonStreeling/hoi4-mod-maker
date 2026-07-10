@@ -312,6 +312,12 @@ class OverlayMixin:
         painter = QPainter(img)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
+        from PyQt5.QtGui import QFont
+        name_font = QFont("Microsoft YaHei")
+        name_font.setPixelSize(12)
+        name_font.setBold(True)
+        painter.setFont(name_font)
+
         for pid, vp_val in self._vp_data.items():
             if vp_val <= 0:
                 continue
@@ -324,6 +330,15 @@ class OverlayMixin:
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(QBrush(QColor(220, 30, 30)))
             painter.drawEllipse(cx - 1, cy - 1, 3, 3)
+
+            # 城市名: 红点右侧, 深色描边 + 白字 (放大画布才读得清, 和游戏一致)
+            name = self._vp_names.get(pid, "")
+            if name:
+                painter.setPen(QColor(20, 20, 20, 200))
+                for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    painter.drawText(cx + 5 + dx, cy + 4 + dy, name)
+                painter.setPen(QColor(255, 255, 255, 235))
+                painter.drawText(cx + 5, cy + 4, name)
 
         painter.end()
         self._vp_overlay_item.setPixmap(QPixmap.fromImage(img))

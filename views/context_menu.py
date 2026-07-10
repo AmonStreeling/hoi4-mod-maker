@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt5.QtWidgets import QMenu, QApplication, QInputDialog
+from PyQt5.QtWidgets import QMenu, QApplication
 from PyQt5.QtCore import QPoint
 
 from data.terrain_types import (
@@ -152,17 +152,20 @@ class ProvinceContextMenu:
         self._canvas.refresh_display()
 
     def _set_vp(self, pid: int) -> None:
-        """弹出对话框设置胜利点。"""
-        parent = self._canvas.window()
-        value, ok = QInputDialog.getInt(
-            parent, tr("context_set_vp_title"),
-            tr("context_set_vp_label", pid),
-            1, 0, 50, 1,
-        )
+        """弹出对话框设置胜利点数值 + 城市名。"""
+        ctrl = self._controllers.get("state")
+        if ctrl is None:
+            return
+        state_mgr = ctrl.project.state_mgr
+        sid = state_mgr.get_state_of_province(pid)
+        state = state_mgr.get_state(sid) if sid > 0 else None
+        cur_vp = state.victory_points.get(pid, 0) if state else 0
+        cur_name = state.vp_names.get(pid, "") if state else ""
+
+        from views.vp_dialog import ask_vp
+        value, name, ok = ask_vp(self._canvas.window(), pid, cur_vp, cur_name)
         if ok:
-            ctrl = self._controllers.get("state")
-            if ctrl is not None:
-                ctrl.set_vp(pid, value)
+            ctrl.set_vp(pid, value, name)
 
     def _set_capital(self, pid: int) -> None:
         """设为国家首都。"""
