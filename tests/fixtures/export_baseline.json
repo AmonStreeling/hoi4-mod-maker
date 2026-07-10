@@ -244,6 +244,7 @@
   "map/terrain/colormap_water_0.dds": "6f1a83f71286d878586055d3a8be01fd4b60b80d8b116860ed990de25bc6d31c",
   "map/terrain/colormap_water_1.dds": "ac51c02e9d8ff4f57c888f6d65d323f1629ff99ae76324a4bc2e721c03caef0e",
   "map/terrain/colormap_water_2.dds": "1564c556ca06f1dd23032b0328b45240d0fec504e444a8ea8bdd66b05dce44b9",
+  "map/terrain/fow_rgb_waterspec_a.dds": "f6423c89860e7860daeb20078d58a08093242561f04ee1a9c68ff04dcfd5ca36",
   "map/trees.bmp": "fe3378df867744e4b87d5fedc55998dd66239b6173918f8eff51f7c060576dd6",
   "map/unitstacks.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "map/weatherpositions.txt": "8faa6b15e45435c3d4cc24db63e07b4a2116e99015fee22c91c22259b1b56029",

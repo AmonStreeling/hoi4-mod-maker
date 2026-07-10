@@ -42,10 +42,11 @@ class HeightController(BaseController):
         cmd = SetHeightCommand(map_data, mask, self.current_height_value)
         self.history.execute(cmd)
         self.project.mark_dirty()
-        # 高度变了 → world_normal 必须重生（法线从高度图算）; colormap 也略受影响
+        # 高度变了 → world_normal 必须重生（法线从高度图算）; colormap/fow 也略受影响
         self._invalidate_art_assets(
             "map/world_normal.bmp",
             "map/terrain/colormap_rgb_cityemissivemask_a.dds",
+            "map/terrain/fow_rgb_waterspec_a.dds",
         )
         self._emit_render(full=True)
         self._emit_status(f"省份 {pid} 高度已设为 {self.current_height_value}")

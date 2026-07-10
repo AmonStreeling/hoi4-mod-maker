@@ -6,7 +6,7 @@ vanilla 文件画的是地球大陆 (北美/欧洲/非洲), 架空 MOD 不覆盖
 
 格式: DDS, 2816x1024, 无压缩 BGRA8, 128 字节头.
 RGB channel 存颜色, Alpha channel 存城市夜间灯光 mask (0 = 无灯, 255 = 亮城市).
-我们架空 MOD 不做城市灯光, alpha 全部给 0.
+灯光 mask 从 urban 地形自动点亮 (+光晕), 无 urban 地形时 alpha 全 0.
 
 生成逻辑: 把 tile_map 从 5632x2048 降采样到 2816x1024, 陆地涂土色 / 海洋涂深蓝.
 """
@@ -76,29 +76,22 @@ def write_water_colormap_dds(
 ) -> None:
     """生成 map/terrain/colormap_water_0/1/2.dds — 海洋颜色, 三个 MIP 级别.
 
-    用 distance_transform 算"距陆地距离" → 浅海到深海渐变:
-    - 近海 (距离 < 80px): 青绿色 → 深蓝
-    - 远海: 纯深蓝
-    海岸礁石带浅黄一点点过渡, 让海陆衔接自然.
+    渐变公式在 domain/water_colormap (预览海面同款):
+    距陆地 < 80px 青绿 → 深蓝, 远海纯深蓝.
     """
     try:
-        from scipy.ndimage import distance_transform_edt
+        from domain.water_colormap import water_color_rgb
+        rgb = water_color_rgb(tile_map)
     except ImportError:
         # 没 scipy 退回纯色
         return _write_water_colormap_solid(tile_map, output_dir)
 
-    # 在 full size 算距离
-    sea = (tile_map == TILE_SEA) | (tile_map == 0)
-    dist_to_land = distance_transform_edt(sea).astype(np.float32)
-
-    # BGRA: 浅海青绿 → 深海深蓝
-    SHALLOW = np.array([180, 200, 130, 255], dtype=np.float32)  # 青绿 (B=180 G=200 R=130)
-    DEEP = np.array([110, 70, 30, 255], dtype=np.float32)        # 深蓝
-    norm = np.clip(dist_to_land / 80.0, 0, 1)  # 80 像素到达深海色
-    full_pixels = SHALLOW + (DEEP - SHALLOW) * norm[..., None]
-    # 陆地填默认色 (引擎不用陆地像素的水色, 但写一致避免 mip 边缘伪影)
-    full_pixels[~sea] = DEEP
-    full_pixels = np.clip(full_pixels, 0, 255).astype(np.uint8)
+    rgb = np.clip(rgb, 0, 255).astype(np.uint8)
+    full_pixels = np.empty((*tile_map.shape, 4), dtype=np.uint8)
+    full_pixels[..., 0] = rgb[..., 2]   # B
+    full_pixels[..., 1] = rgb[..., 1]   # G
+    full_pixels[..., 2] = rgb[..., 0]   # R
+    full_pixels[..., 3] = 255
 
     out_dir = os.path.join(output_dir, "map", "terrain")
     os.makedirs(out_dir, exist_ok=True)
@@ -135,6 +128,55 @@ def _write_water_colormap_solid(tile_map, output_dir):
             f.write(pixels.tobytes())
 
 
+def write_fow_dds(
+    tile_map: np.ndarray,
+    output_dir: str,
+    height_map: np.ndarray | None = None,
+) -> None:
+    """生成 map/terrain/fow_rgb_waterspec_a.dds — 战争迷雾明暗 + 水面反射.
+
+    通道语义 (2026-07-10 解码 vanilla 实测, wiki 无文档):
+    - RGB: 迷雾下的灰度明暗, 陆地亮 (~150, 随高度增亮) / 海洋暗 (~64)
+    - A:   水面反射强度, 海 ~46 / 陆 ~21
+    尺寸为 provinces.bmp 的一半. 不覆盖会回退 vanilla 的地球形状贴图,
+    自定义地图上反光和迷雾底纹按地球海陆分布走 → 错位.
+    """
+    ds = tile_map[::2, ::2]
+    h, w = ds.shape
+    sea = (ds == TILE_SEA) | (ds == 0)
+    lake = ds == TILE_LAKE
+    land = ~sea & ~lake
+
+    gray = np.full((h, w), 64.0, dtype=np.float32)
+    gray[lake] = 80.0
+    if height_map is not None and height_map.shape == tile_map.shape:
+        ds_height = height_map[::2, ::2].astype(np.float32)
+        # 海平面 (~95) 附近 ~130, 高山 ~185 — 对齐 vanilla 陆地 140~170 区间
+        gray[land] = np.clip(130.0 + (ds_height[land] - 95.0) * 0.4, 120.0, 185.0)
+    else:
+        gray[land] = 150.0
+    alpha = np.where(land, 21.0, 46.0).astype(np.float32)
+
+    # 轻度模糊: 海岸过渡自然 (vanilla 低分辨率手绘无硬边)
+    try:
+        from scipy.ndimage import gaussian_filter
+        gray = gaussian_filter(gray, sigma=1.5)
+        alpha = gaussian_filter(alpha, sigma=1.5)
+    except ImportError:
+        pass
+
+    pixels = np.empty((h, w, 4), dtype=np.uint8)
+    pixels[..., :3] = np.clip(gray, 0, 255).astype(np.uint8)[..., None]
+    pixels[..., 3] = np.clip(alpha, 0, 255).astype(np.uint8)
+
+    out_dir = os.path.join(output_dir, "map", "terrain")
+    os.makedirs(out_dir, exist_ok=True)
+    header = _build_dds_header(w, h)
+    with open(os.path.join(out_dir, "fow_rgb_waterspec_a.dds"), "wb") as f:
+        f.write(header)
+        f.write(pixels.tobytes())
+
+
 def write_colormap_dds(
     tile_map: np.ndarray,
     output_dir: str,
@@ -168,6 +210,7 @@ def write_colormap_dds(
     pixels[:] = color_sea
     land_mask = downsampled == TILE_LAND
     lake_mask = downsampled == TILE_LAKE
+    urban_mask = np.zeros((h, w), dtype=bool)  # 城市灯光 (alpha 通道) 用
 
     if terrain_map is not None and terrain_map.shape == tile_map.shape:
         # 按地形类型着色陆地
@@ -181,6 +224,8 @@ def write_colormap_dds(
             if ttype and ttype in _TERRAIN_TYPE_COLORS:
                 tmask = land_mask & (ds_terrain == idx)
                 pixels[tmask] = _TERRAIN_TYPE_COLORS[ttype]
+                if ttype == "urban":
+                    urban_mask |= tmask
     else:
         pixels[land_mask] = color_land
 
@@ -237,6 +282,22 @@ def write_colormap_dds(
         pixels[lake_mask] = color_lake
     except ImportError:
         pass  # scipy 不在时退回硬边版本
+
+    # ── 城市夜间灯光: alpha 通道, urban 地形处发光 + 模糊光晕 ──
+    # (wiki: "more opacity means stronger night lights"; 平铺灯光纹理
+    #  citylights_rgb_snowmask_a 用 vanilla 的即可, 位置全由这个 mask 定)
+    alpha = np.zeros((h, w), dtype=np.float32)
+    alpha[urban_mask] = 200.0
+    if urban_mask.any():
+        try:
+            from scipy.ndimage import gaussian_filter
+            # 城市本体保持全亮, 光晕取模糊结果的最大值 (小城不被模糊削暗)
+            alpha = np.maximum(alpha, gaussian_filter(alpha, sigma=2.0))
+        except ImportError:
+            pass
+    # 灯光只留在陆地上 (模糊会渗进海面)
+    alpha[~land_mask] = 0.0
+    pixels[..., 3] = np.clip(alpha, 0, 255).astype(np.uint8)
 
     # 写文件
     out_dir = os.path.join(output_dir, "map", "terrain")

@@ -171,12 +171,13 @@ class LandController(BaseController):
             self.history.execute(cmd)
             self._stroke_changes = {}
             self.project.mark_dirty()
-            # 陆海划分变了 → colormap / world_normal / cities 需要重生
+            # 陆海划分变了 → colormap / fow / world_normal / cities 需要重生
             self._invalidate_art_assets(
                 "map/terrain/colormap_rgb_cityemissivemask_a.dds",
                 "map/terrain/colormap_water_0.dds",
                 "map/terrain/colormap_water_1.dds",
                 "map/terrain/colormap_water_2.dds",
+                "map/terrain/fow_rgb_waterspec_a.dds",
                 "map/world_normal.bmp",
             )
             self._emit_render(full=True)
@@ -209,6 +210,7 @@ class LandController(BaseController):
             "map/terrain/colormap_water_0.dds",
             "map/terrain/colormap_water_1.dds",
             "map/terrain/colormap_water_2.dds",
+            "map/terrain/fow_rgb_waterspec_a.dds",
             "map/world_normal.bmp",
         )
         self._emit_render(full=True)

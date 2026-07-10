@@ -182,6 +182,15 @@ def export_full_mod(
     else:
         _gen_water_colormap()
 
+    # fow_rgb_waterspec_a.dds 战争迷雾明暗 + 水面反射
+    # (不覆盖会回退 vanilla 的地球形状贴图 → 反光/迷雾按地球海陆分布走)
+    from export.writers.map.colormap_dds import write_fow_dds
+    write_or_restore(
+        "map/terrain/fow_rgb_waterspec_a.dds",
+        output_dir, assets, dirty_assets,
+        lambda: write_fow_dds(tile_map, output_dir, height_map=heightmap),
+    )
+
     # ambient_object.txt — 地图边框 (frame_border_top/bottom 挡住上下空白)
     from export.writers.map.ambient_object import write_ambient_object_txt
     write_ambient_object_txt(output_dir)
