@@ -137,6 +137,9 @@ def _populate_imported_data(project, result: dict) -> None:
 class MainWindowFileOpsMixin:
     """文件/导入/导出/测试导出操作，混入 MainWindow。"""
 
+    # 当前项目文件路径; None = 还没存过 (新建/导入的项目) → 保存走另存为
+    _current_project_path: str | None = None
+
     # ═══════════════════════ 导出 ═══════════════════════════
 
     def _on_export_mod(self) -> None:
@@ -194,16 +197,31 @@ class MainWindowFileOpsMixin:
         self._cmd_history.clear()
         self._update_province_count()
         self._canvas.refresh_display()
+        self._current_project_path = None  # 新项目还没有文件, 保存时另存为
         self._status_info.setText(tr("file_ops_new_created", new_w, new_h))
         if hasattr(self, '_show_editor'):
             self._show_editor()
 
     def _on_save_project(self) -> None:
+        """保存: 已有项目文件直接覆盖; 新建/导入的项目第一次保存走另存为。"""
+        import os
+        path = self._current_project_path
+        if path and os.path.isfile(path):
+            self._save_project_to(path)
+        else:
+            self._on_save_project_as()
+
+    def _on_save_project_as(self) -> None:
+        """另存为: 弹窗选路径。"""
         path, _ = QFileDialog.getSaveFileName(
             self, tr("file_ops_save_title"), "", tr("file_ops_proj_filter")
         )
         if not path:
             return
+        self._save_project_to(path)
+
+    def _save_project_to(self, path: str) -> None:
+        """写项目文件到指定路径, 成功后记住路径供下次直接覆盖。"""
         try:
             from services.project_service import save_project
             save_project(
@@ -215,6 +233,7 @@ class MainWindowFileOpsMixin:
                 adjacency_rule_mgr=self._project.adjacency_rule_mgr,
                 strategic_region_mgr=self._project.strategic_region_mgr,
             )
+            self._current_project_path = path
             self._status_info.setText(tr("file_ops_saved", path))
             # 记录到最近项目
             from views.welcome_page import save_recent_project
@@ -262,7 +281,8 @@ class MainWindowFileOpsMixin:
                 )
             else:
                 self._status_info.setText(tr("file_ops_loaded", path))
-            # 记录到最近项目 + 切换到编辑器
+            # 记住路径 (之后"保存"直接覆盖) + 记录到最近项目 + 切换到编辑器
+            self._current_project_path = path
             from views.welcome_page import save_recent_project
             save_recent_project(path)
             if hasattr(self, '_show_editor'):

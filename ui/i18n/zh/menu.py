@@ -23,6 +23,7 @@ STRINGS: dict[str, str] = {
     "action_redo": "重做",
     "action_reset_hints": "重置操作提示",
     "action_save": "保存项目",
+    "action_save_as": "另存为...",
     "action_shortcut_settings": "快捷键设置...",
     "action_show_grid": "显示网格",
     "action_show_ref": "显示参考图",
