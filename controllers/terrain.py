@@ -85,7 +85,10 @@ class TerrainController(BaseController):
             "map/world_normal.bmp",
         )
         self._emit_render(full=True)
-        self._emit_status(f"省份 {pid} 地形已设为 {ptype or '未知'}")
+        from data.terrain_types import PALETTE_TO_TYPE, TERRAIN_TYPES
+        tkey = PALETTE_TO_TYPE.get(self.current_terrain_index)
+        tname = TERRAIN_TYPES[tkey].name_cn if tkey in TERRAIN_TYPES else "未知"
+        self._emit_status(f"省份 {pid} 地形已设为 {tname}")
 
     def on_press(self, x: int, y: int, pid: int, button: str, modifiers: set) -> bool:
         """画笔模式下鼠标按下。"""
