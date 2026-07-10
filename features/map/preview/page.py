@@ -24,6 +24,7 @@ class PreviewPage(QWidget):
     refresh_requested = pyqtSignal()
     game_dir_changed = pyqtSignal(str)
     political_toggled = pyqtSignal(bool)
+    night_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -58,6 +59,15 @@ class PreviewPage(QWidget):
         political_hint.setWordWrap(True)
         political_hint.setStyleSheet(f"color: {_DIM}; font-size: 11px;")
         layout.addWidget(political_hint)
+
+        # 夜景: 压暗底图 + urban 地形处点亮城市灯光
+        self._night_chk = QCheckBox(tr("preview_night_label"))
+        self._night_chk.toggled.connect(self.night_toggled.emit)
+        layout.addWidget(self._night_chk)
+        night_hint = QLabel(tr("preview_night_hint"))
+        night_hint.setWordWrap(True)
+        night_hint.setStyleSheet(f"color: {_DIM}; font-size: 11px;")
+        layout.addWidget(night_hint)
 
         # ── 游戏目录状态 ──
         dir_title = QLabel(tr("preview_game_dir_title"))

@@ -62,17 +62,17 @@ def test_water_overrides_texture():
     assert not np.array_equal(sea, land)
 
 
-def test_shallow_water_lighter_than_deep():
-    """浅滩比深海亮。"""
-    tile_map, terrain_map, height_map = _flat_world()
-    tile_map[:] = TILE_SEA
-    height_map[:, :4] = 0                    # 深
-    height_map[:, 4:] = SEA_LEVEL - 2        # 浅
+def test_near_coast_lighter_than_open_sea():
+    """近岸比远海亮 (与导出的 colormap_water 同一距岸渐变)。"""
+    tile_map, terrain_map, height_map = _flat_world(h=8, w=256)
+    tile_map[:, 8:] = TILE_SEA               # 左边一条陆地, 往右全是海
 
     out = compose_preview(tile_map, terrain_map, height_map, None,
                           _fake_atlas(), {0: 1})
 
-    assert int(out[0, 6].sum()) > int(out[0, 1].sum())
+    near = out[4, 10]                        # 离岸 2px
+    far = out[4, 250]                        # 离岸 240px (> 80px 已到纯深海)
+    assert int(near.sum()) > int(far.sum())
 
 
 def test_rivers_drawn_on_top():

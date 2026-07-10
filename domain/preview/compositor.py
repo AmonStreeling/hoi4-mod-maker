@@ -4,7 +4,7 @@
 分层叠加 (全部 numpy 向量化, 零 Qt):
 1. 地形材质铺底: terrain_map 调色板索引 → atlas 瓦片 → 按像素坐标平铺采样
 2. 高度光影: 高度图梯度算法线, 与平行光点积得到明暗 (近似游戏 shader)
-3. 海洋/湖泊: 按水深从浅滩色渐变到深海色
+3. 海洋/湖泊: 距岸渐变, 公式与导出的 colormap_water 相同 (domain/water_colormap)
 4. 河流: 河流像素覆盖为河水色
 
 材质/映射来自游戏本体 (services/game_assets), 光影公式是近似——
@@ -15,16 +15,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from data.constants import TILE_LAND, SEA_LEVEL
-
-# 水体配色 (近似 vanilla 观感): 深海 → 浅滩 线性渐变
-DEEP_WATER_RGB = np.array([14, 41, 88], dtype=np.float32)
-SHALLOW_WATER_RGB = np.array([62, 138, 178], dtype=np.float32)
-# 渐变跨越的深度范围 (高度图单位); 比 SEA_LEVEL 低这么多就是纯深海色
-WATER_DEPTH_RANGE = 40.0
-# 近岸浅滩过渡带: 模糊半径 (像素) 与提亮强度
-COAST_GLOW_SIGMA = 24.0
-COAST_GLOW_STRENGTH = 1.4
+from data.constants import TILE_LAND
 
 # 河流颜色 (略亮于浅滩, 在陆地上才看得清)
 RIVER_RGB = np.array([60, 120, 190], dtype=np.float32)
@@ -113,19 +104,12 @@ def compose_preview(
     shade = _hillshade(height_map)
     rgb = base * shade[:, :, None]
 
-    # ── 3. 海洋/湖泊按深度着色 ──
-    # 自制地图海底往往是一马平川 → 单纯按深度会得到一整片死蓝。
-    # 叠加"近岸浅滩": 陆地掩码高斯模糊后在水侧形成发亮的海岸过渡带
-    # (vanilla 的海岸观感来自大陆架高度数据, 这里用距离近似)。
+    # ── 3. 海洋/湖泊: 与导出的 colormap_water 同一渐变公式 ──
+    # 游戏海面色源就是那张贴图, 预览直接用同款距岸渐变 → 所见即导出。
     water = tile_map != TILE_LAND
     if np.any(water):
-        from scipy.ndimage import gaussian_filter
-        depth = SEA_LEVEL - height_map.astype(np.float32)
-        t = np.clip(depth / WATER_DEPTH_RANGE, 0.0, 1.0)
-        coast_glow = gaussian_filter(
-            (tile_map == TILE_LAND).astype(np.float32), COAST_GLOW_SIGMA)
-        t = np.clip(t - coast_glow * COAST_GLOW_STRENGTH, 0.0, 1.0)[:, :, None]
-        water_rgb = SHALLOW_WATER_RGB * (1.0 - t) + DEEP_WATER_RGB * t
+        from domain.water_colormap import water_color_rgb
+        water_rgb = water_color_rgb(tile_map)
         rgb[water] = water_rgb[water]
 
     # ── 4. 河流覆盖 ──

@@ -9,6 +9,8 @@ STRINGS = {
     "preview_refresh_hint": "修改地图后预览不会自动更新（整图渲染需要几秒）。改完地图回到这里点一下「刷新预览」即可看到最新效果。",
     "preview_political_label": "政治视图（叠加国家势力色）",
     "preview_political_hint": "和游戏内政治地图同款效果：国家颜色盖在地形光影上，国界压暗。需要先创建国家并分配领土，否则只显示地形。",
+    "preview_night_label": "夜景（城市灯光）",
+    "preview_night_hint": "模拟游戏里的夜晚：整张地图变暗，画了城市地形的地方亮起灯光。灯光位置和导出后游戏夜晚显示的位置一致。",
     "preview_game_dir_title": "游戏目录",
     "preview_game_dir_found": "已找到游戏文件：{path}",
     "preview_game_dir_missing": "未找到《钢铁雄心4》安装目录。预览需要读取游戏自带的地形贴图，请点击下方按钮选择游戏的安装文件夹。",

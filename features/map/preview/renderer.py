@@ -21,6 +21,8 @@ def invalidate_cache(canvas) -> None:
     """清掉合成缓存, 下次渲染重新合成。"""
     canvas._preview_cache = None
     canvas._preview_political_cache = None
+    canvas._preview_night_cache = None
+    canvas._preview_night_src = None
 
 
 def render(canvas) -> None:
@@ -49,6 +51,17 @@ def render(canvas) -> None:
             )
             canvas._preview_political_cache = pcache
         cache = pcache
+
+    # 夜景开关: 压暗 + urban 城市灯光 (以底图对象为缓存源,
+    # 政治视图开/关换了底图会自动重算)
+    if getattr(canvas, "_preview_night", False):
+        ncache = getattr(canvas, "_preview_night_cache", None)
+        if ncache is None or getattr(canvas, "_preview_night_src", None) is not cache:
+            from domain.preview.night import apply_night_layer
+            ncache = apply_night_layer(cache, canvas._terrain_map)
+            canvas._preview_night_cache = ncache
+            canvas._preview_night_src = cache
+        cache = ncache
 
     # RGB → 显示缓冲 (BGRA)
     buf = canvas._display_buffer
