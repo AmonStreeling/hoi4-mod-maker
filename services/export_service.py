@@ -209,6 +209,90 @@ def pre_export_check_and_fix(
         if continent_mgr.count() == 0:
             warnings.append("没有大陆定义，导出时使用默认大陆")
 
+    # ── 5.4 state ↔ 战略区对齐 ──
+    # HOI4 要求一个 state 的所有省份属于同一个战略区, 否则 nudge 报
+    # "provinces are not belong to same strategic region as other provinces".
+    # 手绘战略区 / 按陆块自动生成都可能把 state 切开. 修复策略:
+    # 以"州内像素连通组"为单位, 把整组省份挪进组内多数省份所在的战略区.
+    # 组连通且目标区本来就含组内省份 → 挪完目标区仍连通, 不会制造 5.5 要拆的情况.
+    # 州本身不连通(飞地/离岸岛)只能对齐到组级, 剩余的由 5.6 终检警告.
+    if (strategic_region_mgr is not None and strategic_region_mgr.regions
+            and state_mgr and state_mgr.states):
+        from scipy.ndimage import label as _sci_label, find_objects as _sci_find_objects
+
+        regions_now = strategic_region_mgr.regions
+        pid_to_rid: dict[int, int] = {}
+        for r in regions_now.values():
+            for p in r.province_ids:
+                pid_to_rid[p] = r.id
+
+        # 被切开的 state: 省份分属多个战略区, 或部分省份没分配战略区
+        split_states: list[tuple[int, list[int]]] = []
+        for sid, st in state_mgr.states.items():
+            provs = [p for p in st.provinces if 0 < p <= province_count]
+            if len(provs) < 2:
+                continue
+            rids = {pid_to_rid.get(p, 0) for p in provs}
+            if len(rids - {0}) > 1 or (len(rids) > 1 and 0 in rids):
+                split_states.append((sid, provs))
+
+        if split_states:
+            # 每个 state 只在自己的包围盒内算连通分量, 避免逐 state 全图扫描
+            state_id_map = state_mgr.build_state_id_map(province_map)
+            max_sid = max(state_mgr.states.keys())
+            boxes = _sci_find_objects(state_id_map, max_label=max_sid)
+
+            region_provs: dict[int, set[int]] = {
+                rid: set(r.province_ids) for rid, r in regions_now.items()
+            }
+            moved = 0
+            for sid, provs in split_states:
+                box = boxes[sid - 1] if 0 < sid <= len(boxes) else None
+                if box is None:
+                    continue
+                sub_pm = province_map[box]
+                labeled, n_comp = _sci_label(state_id_map[box] == sid)
+                for comp in range(1, n_comp + 1):
+                    comp_pids = [int(p) for p in np.unique(sub_pm[labeled == comp]) if p > 0]
+                    counts: dict[int, int] = {}
+                    for p in comp_pids:
+                        rid = pid_to_rid.get(p, 0)
+                        if rid:
+                            counts[rid] = counts.get(rid, 0) + 1
+                    if not counts:
+                        continue  # 整组都没分配战略区 → 留给导出对话框的补全处理
+                    # 多数省份所在的战略区; 数量并列时取小 ID 保证结果确定
+                    target = min(counts, key=lambda k: (-counts[k], k))
+                    for p in comp_pids:
+                        old = pid_to_rid.get(p, 0)
+                        if old == target:
+                            continue
+                        if old in region_provs:
+                            region_provs[old].discard(p)
+                        region_provs.setdefault(target, set()).add(p)
+                        pid_to_rid[p] = target
+                        moved += 1
+
+            if moved:
+                # 写回 manager; 被挪空的战略区直接删掉 (导出时 ID 会重新编号)
+                emptied = []
+                for rid, prov_set in region_provs.items():
+                    region = strategic_region_mgr.get(rid)
+                    if region is None:
+                        continue
+                    if not prov_set:
+                        emptied.append(rid)
+                    elif set(region.province_ids) != prov_set:
+                        region.province_ids = sorted(prov_set)
+                for rid in emptied:
+                    strategic_region_mgr.remove_region(rid)
+                msg = (f"修正 {moved} 个省份的战略区归属, 消除 state 被战略区切开"
+                       f" (涉及 {len(split_states)} 个 State")
+                if emptied:
+                    msg += f", 删除 {len(emptied)} 个被挪空的战略区"
+                msg += ")"
+                fixed.append(msg)
+
     # ── 5.5 拆分地理不连通的 strategic region ──
     # HOI4 引擎要求每个 strategic region 内的省份**地理相连** (像素级 4-邻接).
     # 用户在 UI 手动画 region 或老版本数据可能产生不连通的 region (一个 region
@@ -238,6 +322,29 @@ def pre_export_check_and_fix(
             fixed.append(
                 f"拆分 {split_count} 个地理不连通的战略区域 → 新增 {new_regions_added} 个连通区域 "
                 f"(HOI4 要求 region 内省份必须像素相连, 否则崩溃)"
+            )
+
+    # ── 5.6 终检: 仍被战略区切开的 state ──
+    # 经过 5.4 对齐 + 5.5 连通拆分后还跨区的, 只剩"州本身像素不连通"(飞地/离岸岛):
+    # 战略区必须连通(否则崩溃), 隔开的两块地没法同区, 这是数据本身的矛盾, 自动修不了.
+    # 游戏里只是 nudge 警告, 不影响游玩; 要消除得把飞地拆成独立 State.
+    if (strategic_region_mgr is not None and strategic_region_mgr.regions
+            and state_mgr and state_mgr.states):
+        pid_to_rid_final: dict[int, int] = {}
+        for r in strategic_region_mgr.regions.values():
+            for p in r.province_ids:
+                pid_to_rid_final[p] = r.id
+        cross_sids = []
+        for sid, st in state_mgr.states.items():
+            rids = {pid_to_rid_final[p] for p in st.provinces if p in pid_to_rid_final}
+            if len(rids) > 1:
+                cross_sids.append(sid)
+        if cross_sids:
+            preview = ", ".join(str(s) for s in cross_sids[:10])
+            more = f" 等共 {len(cross_sids)} 个" if len(cross_sids) > 10 else ""
+            warnings.append(
+                f"{len(cross_sids)} 个 State 含飞地/离岸岛, 无法归入同一战略区"
+                f" (State {preview}{more})。游戏内只有无害警告; 要消除的话把飞地拆成独立 State"
             )
 
     # ── 6. 验证国家首都 ──
@@ -420,6 +527,7 @@ def export_mod(
         state_mgr=state_mgr,
         country_mgr=country_mgr,
         continent_mgr=continent_mgr,
+        strategic_region_mgr=strategic_region_mgr,
     )
 
     # ── 填充 State 默认资源/建筑 ──

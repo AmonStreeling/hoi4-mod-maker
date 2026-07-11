@@ -312,6 +312,7 @@ class ModVerifier:
 
         self._state_provinces = set()  # 所有State中的省份
         self._state_ids = set()
+        self._state_prov_lists = {}    # {state_id: [pid...]} — 供战略区交叉检查用
 
         for fn in files:
             with open(os.path.join(state_dir, fn), "r") as f:
@@ -331,6 +332,8 @@ class ModVerifier:
                     if p in self._state_provinces:
                         self.errors.append(f"{fn}: 省份 {p} 在多个State中（必须唯一）")
                     self._state_provinces.add(p)
+                if id_match:
+                    self._state_prov_lists[int(id_match.group(1))] = provs
 
             # 检查 owner
             if "owner" not in content:
@@ -352,16 +355,41 @@ class ModVerifier:
             return
 
         self._region_provinces = set()
+        pid_to_rid = {}  # {pid: region_id} — 供 state 跨区检查用
         for fn in files:
             with open(os.path.join(sr_dir, fn), "r") as f:
                 content = f.read()
+            id_match = re.search(r'id\s*=\s*(\d+)', content)
+            rid = int(id_match.group(1)) if id_match else 0
+            if rid == 0:
+                self.errors.append(f"战略区域 {fn}: 缺少 id 字段")
             prov_match = re.search(r'provinces\s*=\s*\{([^}]+)\}', content)
             if prov_match:
                 provs = [int(x) for x in prov_match.group(1).split() if x.isdigit()]
-                self._region_provinces.update(provs)
+                for p in provs:
+                    if p in self._region_provinces:
+                        self.errors.append(f"战略区域 {fn}: 省份 {p} 在多个战略区中（必须唯一）")
+                    self._region_provinces.add(p)
+                    if rid > 0:  # 缺 id 的文件不参与跨区判断, 避免误报
+                        pid_to_rid[p] = rid
 
             if "weather" not in content:
                 self.errors.append(f"战略区域 {fn}: 缺少 weather 块")
+
+        # state ↔ 战略区交叉检查: 一个 state 的省份必须都在同一战略区
+        # (nudge: "provinces are not belong to same strategic region")
+        cross = []
+        for sid, provs in sorted(getattr(self, "_state_prov_lists", {}).items()):
+            rids = {pid_to_rid[p] for p in provs if p in pid_to_rid}
+            if len(rids) > 1:
+                cross.append(sid)
+        if cross:
+            preview = ", ".join(str(s) for s in cross[:10])
+            more = f" 等共 {len(cross)} 个" if len(cross) > 10 else ""
+            self.warnings.append(
+                f"{len(cross)} 个 State 的省份跨多个战略区 (State {preview}{more})。"
+                f"游戏 nudge 会警告但不崩溃; 通常是 state 含飞地/离岸岛"
+            )
 
         self._log(f"    → {len(files)} 个区域, 覆盖 {len(self._region_provinces)} 个省份")
 

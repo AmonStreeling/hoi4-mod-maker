@@ -139,6 +139,7 @@ def main() -> None:
     report = pre_export_check_and_fix(
         tile_map, province_map, terrain_map,
         state_mgr, country_mgr, continent_mgr,
+        strategic_region_mgr=strategic_region_mgr,
     )
     if report.fixed:
         print("\n── 自动修复 ──")
