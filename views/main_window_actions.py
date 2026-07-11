@@ -861,12 +861,11 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         self._canvas.height_map = map_data.height_map
         self._canvas._full_render()
         self._project.mark_dirty()
+        # 降级改了 terrain+height → colormap/fow/world_normal 都要重生
         self._project.mark_assets_dirty(
             "map/terrain/colormap_rgb_cityemissivemask_a.dds",
             "map/terrain/fow_rgb_waterspec_a.dds",
-        )
-        self._project.mark_assets_dirty(
-            "map/terrain/world_normal.bin",
+            "map/world_normal.bmp",
         )
         self._status_info.setText(tr("status_downgrade_done"))
 
