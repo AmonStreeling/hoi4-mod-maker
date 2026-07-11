@@ -81,3 +81,36 @@ class ProvincialTerrainController(BaseController):
         self.project.mark_dirty()
         self._emit_render(full=True)
         self._emit_status(tr("status_pterrain_applied", pid, self.current_type))
+
+    def sync_from_visual(self) -> None:
+        """从视觉地形 (terrain.bmp) 重新推断全部陆地省份的属性地形。
+
+        效果: 每个陆地省份的属性 = 它在 terrain_map 上的多数地形, 覆盖手动设置。
+        适用: 自动生成/重画视觉地形后, 想让属性层全量跟上时。
+        调用: 属性地形 page 的同步按钮 (点击前 page 已弹二次确认); 可撤销。
+        """
+        from services.terrain_service import compute_provincial_terrain_from_bmp
+
+        map_data = self.project.map_data
+        inferred = compute_provincial_terrain_from_bmp(
+            map_data.terrain_map, map_data.province_map, map_data.tile_map,
+        )
+        changes = {
+            pid: terr for pid, terr in inferred.items()
+            if map_data.provincial_terrain.get(pid) != terr
+        }
+        if not changes:
+            self._emit_status(tr("status_pterrain_sync_nochange"))
+            return
+
+        cmd = PaintTerrainCommand(
+            map_data,
+            terrain_changes={},
+            height_changes=None,
+            provincial_terrain_changes=changes,
+        )
+        cmd.label = "同步属性地形"
+        self.history.execute(cmd)
+        self.project.mark_dirty()
+        self._emit_render(full=True)
+        self._emit_status(tr("status_pterrain_synced", len(changes)))

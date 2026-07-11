@@ -28,6 +28,7 @@ class ProvincialTerrainPage(QWidget):
 
     type_changed = pyqtSignal(str)
     assign_mode_changed = pyqtSignal(bool)  # True=分配模式（点改地形）/ False=查看模式（点只看信息）
+    sync_requested = pyqtSignal()  # 从视觉地形全量重算属性（已过二次确认）
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -94,7 +95,32 @@ class ProvincialTerrainPage(QWidget):
         self._status_label.setStyleSheet(_DIM_LABEL_STYLE)
         outer.addWidget(self._status_label)
 
+        # 从视觉地形重新同步（全量覆盖属性，可撤销）
+        sync_box = _make_section(tr("pterrain_sync_section"))
+        sync_layout = sync_box.layout()
+        self._sync_btn = QPushButton(tr("pterrain_sync_btn"))
+        self._sync_btn.setMinimumHeight(36)
+        self._sync_btn.setToolTip(tr("pterrain_sync_hint"))
+        self._sync_btn.clicked.connect(self._on_sync_clicked)
+        sync_layout.addWidget(self._sync_btn)
+        sync_hint = QLabel(tr("pterrain_sync_hint"))
+        sync_hint.setWordWrap(True)
+        sync_hint.setStyleSheet(f"color: {_DIM}; font-size: 11px;")
+        sync_layout.addWidget(sync_hint)
+        outer.addWidget(sync_box)
+
         outer.addStretch()
+
+    def _on_sync_clicked(self) -> None:
+        """防呆: 二次确认 (覆盖所有省份属性, 撤销才能恢复)。"""
+        from PyQt5.QtWidgets import QMessageBox
+        ret = QMessageBox.question(
+            self, tr("pterrain_sync_confirm_title"),
+            tr("pterrain_sync_confirm_msg"),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if ret == QMessageBox.Yes:
+            self.sync_requested.emit()
 
     def _on_type_clicked(self, btn: QPushButton) -> None:
         tname = btn.property("type_name")

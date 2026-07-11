@@ -322,6 +322,9 @@ class MainWindow(MainWindowActionsMixin, QMainWindow):
         tp.province_terrain_assign_mode_changed.connect(
             self._controllers["province_terrain"].set_assign_mode
         )
+        tp.province_terrain_sync_requested.connect(
+            self._controllers["province_terrain"].sync_from_visual
+        )
 
         # 参考图控件 → 画布
         tp._vanilla_ref_opacity_slider.valueChanged.connect(

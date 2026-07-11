@@ -40,6 +40,8 @@ STRINGS: dict[str, str] = {
     "status_pterrain_selected_view": "已选 {0}（请勾选「分配模式」才能改）",
     "status_pterrain_view": "属性地形：查看模式（勾选「分配模式」才能改）",
     "status_pterrain_view_on": "👁 查看模式：点 province 只看信息",
+    "status_pterrain_synced": "已重新同步 {0} 个省份的属性地形（Ctrl+Z 可撤销）",
+    "status_pterrain_sync_nochange": "属性地形已与视觉地形一致，无需同步",
     "status_ready": "就绪",
     "status_ridge_applied": "山脉已生成",
     "status_ridge_mode_off": "山脉画线模式已关闭",

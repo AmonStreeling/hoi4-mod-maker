@@ -254,6 +254,8 @@ class ToolPanel(QWidget):
     province_terrain_type_changed = pyqtSignal(str)
     # 属性地形：分配模式开关
     province_terrain_assign_mode_changed = pyqtSignal(bool)
+    # 属性地形：从视觉地形全量重算属性
+    province_terrain_sync_requested = pyqtSignal()
     height_value_changed = pyqtSignal(int)
     generate_provinces_requested = pyqtSignal(int)
     validate_requested = pyqtSignal()
@@ -573,6 +575,7 @@ class ToolPanel(QWidget):
         # 属性地形 page 信号
         self._province_terrain_page.type_changed.connect(self.province_terrain_type_changed)
         self._province_terrain_page.assign_mode_changed.connect(self.province_terrain_assign_mode_changed)
+        self._province_terrain_page.sync_requested.connect(self.province_terrain_sync_requested)
 
     def _connect_height_signals(self) -> None:
         p = self._height_page

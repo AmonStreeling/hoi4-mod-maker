@@ -40,6 +40,8 @@ STRINGS: dict[str, str] = {
     "status_pterrain_selected_view": "Selected {0} (enable 'Assign Mode' to edit)",
     "status_pterrain_view": "Attribute terrain: view mode (enable 'Assign Mode' to edit)",
     "status_pterrain_view_on": "👁 View mode: click province to see info",
+    "status_pterrain_synced": "Re-synced attribute terrain of {0} provinces (Ctrl+Z to undo)",
+    "status_pterrain_sync_nochange": "Attribute terrain already matches visual terrain, nothing to sync",
     "status_ready": "Ready",
     "status_ridge_applied": "Mountain ridge applied",
     "status_ridge_mode_off": "Ridge drawing mode off",

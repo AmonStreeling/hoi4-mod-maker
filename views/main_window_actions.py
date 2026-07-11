@@ -735,8 +735,8 @@ class MainWindowActionsMixin(MainWindowFileOpsMixin):
         )
         cmd = GenerateTerrainCommand(map_data, new_terrain)
         self._cmd_history.execute(cmd)
-        # 不再同步覆盖 provincial_terrain (省份属性是用户精挑细选的, 视觉自动生成不该改它).
-        # 想从视觉同步到属性 → 切到 provincial_terrain mode 用专门的同步按钮.
+        # 不覆盖已有 provincial_terrain, 只填补空缺 (GenerateTerrainCommand 内部处理).
+        # 想全量重算属性 → 地形(属性)模式的「从视觉地形重新同步属性」按钮.
         self._project.mark_dirty()
         # 自动生成地形 → colormap 要重生
         self._project.mark_assets_dirty(
