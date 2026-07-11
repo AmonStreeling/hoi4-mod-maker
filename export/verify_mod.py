@@ -166,7 +166,7 @@ class ModVerifier:
         if not os.path.exists(path):
             return
 
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             lines = f.readlines()
 
         if not lines:
@@ -225,7 +225,7 @@ class ModVerifier:
         if not os.path.exists(path):
             return
 
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             content = f.read()
 
         required_refs = [
@@ -315,7 +315,7 @@ class ModVerifier:
         self._state_prov_lists = {}    # {state_id: [pid...]} — 供战略区交叉检查用
 
         for fn in files:
-            with open(os.path.join(state_dir, fn), "r") as f:
+            with open(os.path.join(state_dir, fn), "r", encoding="utf-8-sig", errors="replace") as f:
                 content = f.read()
 
             # 提取 State ID
@@ -357,7 +357,7 @@ class ModVerifier:
         self._region_provinces = set()
         pid_to_rid = {}  # {pid: region_id} — 供 state 跨区检查用
         for fn in files:
-            with open(os.path.join(sr_dir, fn), "r") as f:
+            with open(os.path.join(sr_dir, fn), "r", encoding="utf-8-sig", errors="replace") as f:
                 content = f.read()
             id_match = re.search(r'id\s*=\s*(\d+)', content)
             rid = int(id_match.group(1)) if id_match else 0
@@ -422,7 +422,7 @@ class ModVerifier:
             )
             return
 
-        with open(tag_file, "r") as f:
+        with open(tag_file, "r", encoding="utf-8-sig", errors="replace") as f:
             content = f.read()
 
         self._country_tags = re.findall(r'^([A-Z]{3})\s*=', content, re.MULTILINE)
@@ -453,7 +453,7 @@ class ModVerifier:
             self.warnings.append("缺少意识形态文件（如果replace了common/ideologies则会崩溃）")
             return
 
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             content = f.read()
 
         required = ["democratic", "fascism", "communism", "neutrality"]
@@ -474,7 +474,11 @@ class ModVerifier:
 
         files = [f for f in os.listdir(sc_dir) if f.endswith(".txt")]
         # 检查 town（默认类别）是否存在
-        has_town = any("town" in open(os.path.join(sc_dir, f)).read() for f in files)
+        has_town = any(
+            "town" in open(os.path.join(sc_dir, f), "r",
+                           encoding="utf-8-sig", errors="replace").read()
+            for f in files
+        )
         if not has_town:
             self.errors.append("state_category: 缺少 'town' 类别（State默认使用）")
 
@@ -492,7 +496,7 @@ class ModVerifier:
             return
 
         for fn in files:
-            with open(os.path.join(bm_dir, fn), "r") as f:
+            with open(os.path.join(bm_dir, fn), "r", encoding="utf-8-sig", errors="replace") as f:
                 content = f.read()
             if "randomize_weather" not in content:
                 self.errors.append(f"Bookmark {fn}: 缺少 randomize_weather（必须有）")
@@ -530,7 +534,7 @@ class ModVerifier:
         if not os.path.exists(path):
             return
 
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             content = f.read()
 
         # path= 不能出现在内部 descriptor（只有外层 .mod 才有）
@@ -543,7 +547,7 @@ class ModVerifier:
         mod_dir_name = os.path.basename(self.mod_dir)
         outer = os.path.join(os.path.dirname(self.mod_dir), f"{mod_dir_name}.mod")
         if os.path.exists(outer):
-            with open(outer, "r") as f:
+            with open(outer, "r", encoding="utf-8-sig", errors="replace") as f:
                 outer_content = f.read()
             if "path=" not in outer_content:
                 self.errors.append(f"外层 {mod_dir_name}.mod 缺少 path= 字段")
@@ -561,7 +565,7 @@ class ModVerifier:
         path = self._path("map", "seasons.txt")
         if not os.path.exists(path):
             return
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             content = f.read()
         for season in ["winter", "spring", "summer", "autumn"]:
             if season not in content:

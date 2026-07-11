@@ -333,7 +333,8 @@ class WelcomePage(QWidget):
         config = {}
         if _os.path.exists(config_path):
             try:
-                with open(config_path, "r") as f:
+                # 写入用 utf-8 (ensure_ascii=False), 读必须同编码
+                with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
             except Exception:
                 pass

@@ -12,7 +12,6 @@ STRINGS: dict[str, str] = {
     "status_auto_river_done": "河流生成完成",
     "status_auto_terrain": "正在智能生成地形...",
     "status_auto_terrain_done": "智能地形生成完成 (支持 Ctrl+Z 撤销)",
-    "status_auto_terrain_synced": "（同步 {0} 个省份属性）",
     "status_batch_state_mode": "批量建州：点击省份多选，然后点确认",
     "status_coast_smoothed": "海岸线已平滑（全图）",
     "status_coast_smoothed_region": "海岸线已平滑（选区）",

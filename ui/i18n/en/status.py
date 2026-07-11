@@ -12,7 +12,6 @@ STRINGS: dict[str, str] = {
     "status_auto_river_done": "River generation complete",
     "status_auto_terrain": "Smart generating terrain...",
     "status_auto_terrain_done": "Smart terrain generation done (Ctrl+Z to undo)",
-    "status_auto_terrain_synced": " (synced {0} province attributes)",
     "status_batch_state_mode": "Batch create state: click provinces to multi-select, then confirm",
     "status_coast_smoothed": "Coastline smoothed (entire map)",
     "status_coast_smoothed_region": "Coastline smoothed (selection)",

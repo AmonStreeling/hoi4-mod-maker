@@ -10,7 +10,6 @@ STRINGS: dict[str, str] = {
     "status_auto_river_done": "Генерация рек завершена",
     "status_auto_terrain": "Умная генерация рельефа...",
     "status_auto_terrain_done": "Умная генерация рельефа завершена (Ctrl+Z для отмены)",
-    "status_auto_terrain_synced": " (синхронизировано атрибутов провинций: {0})",
     "status_batch_state_mode": "Пакетное создание региона: кликайте по провинциям для мультивыбора, затем подтвердите",
     "status_coast_smoothed": "Береговая линия сглажена (вся карта)",
     "status_coast_smoothed_region": "Береговая линия сглажена (выделение)",

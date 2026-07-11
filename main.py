@@ -23,7 +23,8 @@ def main():
     config_path = os.path.join(os.path.expanduser("~"), ".hoi4_map_maker.json")
     if os.path.exists(config_path):
         try:
-            with open(config_path, "r") as f:
+            # 配置由 welcome_page 以 utf-8 写入 (ensure_ascii=False), 读必须同编码
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             lang = config.get("language")
             if lang:
