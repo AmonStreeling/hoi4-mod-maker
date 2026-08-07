@@ -75,27 +75,34 @@ def main() -> None:
         )
 
     H, W = tile_map.shape
-    pcount = int(province_map.max())
-    land_pixels = int(np.sum(tile_map == TILE_LAND))
-    sea_pixels = int(np.sum(tile_map == TILE_SEA))
+    pcount = int(province_map.max()) if province_map.size > 0 else 0
+    land_pixels = int(np.sum(tile_map == TILE_LAND)) if tile_map.size > 0 else 0
+    sea_pixels = int(np.sum(tile_map == TILE_SEA)) if tile_map.size > 0 else 0
     print(f"地图: {W}x{H}, 省份: {pcount}, 陆地: {land_pixels:,}, 海洋: {sea_pixels:,}")
 
-    # ── 2. 同步地形 ──
-    ocean_idx = TERRAIN_PALETTE_INDEX["ocean"]
-    plains_idx = TERRAIN_PALETTE_INDEX["plains"]
     land_mask = tile_map == TILE_LAND
-    bad_land = land_mask & (terrain_map == ocean_idx)
-    bad_count = int(np.sum(bad_land))
-    if bad_count > 0:
-        terrain_map[bad_land] = plains_idx
-        print(f"修正: {bad_count:,} 个陆地像素的地形 ocean→plains")
 
     sea_mask = tile_map == TILE_SEA
-    sea_bad = sea_mask & (terrain_map != ocean_idx)
-    sea_bad_count = int(np.sum(sea_bad))
-    if sea_bad_count > 0:
-        terrain_map[sea_bad] = ocean_idx
-        print(f"修正: {sea_bad_count:,} 个海洋像素的地形→ocean")
+
+    # ── 2. 同步地形 ──
+    if terrain_map is not None:
+        ocean_idx = TERRAIN_PALETTE_INDEX["ocean"]
+        plains_idx = TERRAIN_PALETTE_INDEX["plains"]
+        bad_land = land_mask & (terrain_map == ocean_idx)
+        bad_count = int(np.sum(bad_land))
+        if bad_count > 0:
+            terrain_map[bad_land] = plains_idx
+            print(f"修正: {bad_count:,} 个陆地像素的地形 ocean→plains")
+
+        sea_bad = sea_mask & (terrain_map != ocean_idx)
+        sea_bad_count = int(np.sum(sea_bad))
+        if sea_bad_count > 0:
+            terrain_map[sea_bad] = ocean_idx
+            print(f"修正: {sea_bad_count:,} 个海洋像素的地形→ocean")
+    else:
+        print("提示: terrain_map 为空，跳过地形同步")
+
+    sea_mask = tile_map == TILE_SEA
 
     # ── 3. 自动生成高度图 ──
     if height_map is not None and land_mask.any():
